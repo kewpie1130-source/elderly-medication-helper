@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-
-// 👇 這是完全符合你左側檔案樹的精準絕對路徑
-//import 'package:flutter_application_1/firebase_options.dart';
+// 👇 必須完全對齊你目前的專案資料夾名稱：flutter_application_1
+import 'package:flutter_application_1/firebase_options.dart';
 import 'package:flutter_application_1/services/.gitkeep/database_test_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
