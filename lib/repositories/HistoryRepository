@@ -1,0 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class HistoryRepository {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  // 6/15 進度：獲取長者過去所有的用藥打卡歷史紀錄
+  Future<List<Map<String, dynamic>>> getDoseHistory(String userId) async {
+    try {
+      var snapshot = await _db
+          .collection('dose_item_logs')
+          .where('userId', ==: userId)
+          .orderBy('takenAt', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) => doc.data()).toList();
+    } catch (e) {
+      print("讀取歷史紀錄失敗: $e");
+      return [];
+    }
+  }
+}
