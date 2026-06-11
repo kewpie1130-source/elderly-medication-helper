@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (Gemini 2.5 Flash)",
+      "request": "launch",
+      "type": "flutter",
+      "toolArgs": [
+        "--dart-define",
+        "GEMINI_API_KEY=AIzaSyA6VU-QE6B3vXslby6iKrsW41tPXS1HSlE"
+      ]
+    }
+  ]
+}
