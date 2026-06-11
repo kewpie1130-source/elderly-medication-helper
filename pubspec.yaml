@@ -1,0 +1,25 @@
+name: smart_med_admin
+description: "D組後台管理系統"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Firebase 核心套件
+  firebase_core: ^3.15.2
+  # Firestore 資料庫套件
+  cloud_firestore: ^5.6.12
+  # 圖表套件 (之後做 D 組統計圖表會用到)
+  fl_chart: ^0.69.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
