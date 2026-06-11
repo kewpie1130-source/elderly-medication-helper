@@ -9,12 +9,17 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   # Firebase 核心套件
   firebase_core: ^3.15.2
   # Firestore 資料庫套件
   cloud_firestore: ^5.6.12
-  # 圖表套件 (之後做 D 組統計圖表會用到)
-  fl_chart: ^0.69.0
+  # 圖表套件 (D組統計圖表使用)
+  fl_chart: ^1.2.0
+  
+  # 若後續有其他組員加入的套件，請在此處下方依序添加
+  # 範例: 
+  # flutter_tts: ^4.0.0
 
 dev_dependencies:
   flutter_test:

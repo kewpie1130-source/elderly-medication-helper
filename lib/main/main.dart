@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'admin_dashboard/admin_dashboard_page.dart';
+// 因為檔案在 lib/main/ 下，要往上跳一層到 lib，再進入 admin_dashboard
+import '../admin_dashboard/admin_dashboard_page.dart';
 
 void main() {
   runApp(const MyApp());
