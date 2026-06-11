@@ -14,9 +14,8 @@ class DoseSessionPage extends StatefulWidget {
 class _DoseSessionPageState extends State<DoseSessionPage> {
   final DoseSessionRepository _sessionRepo = DoseSessionRepository();
   final MedicineRepository _medicineRepo = MedicineRepository();
-  
-  // 模擬目前要查詢的時段 ID 與日期
-  final String currentSessionId = "session_20260611_morning"; 
+
+  final String currentSessionId = "session_20260611_morning";
   late Future<DoseSession> _sessionFuture;
 
   @override
@@ -26,7 +25,6 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
   }
 
   void _loadSession() {
-    // 企劃書規定的資料庫初始假資料模板
     Map<String, dynamic> defaultSessionData = {
       "sessionId": currentSessionId,
       "userId": "user_001",
@@ -34,7 +32,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
       "slotName": "早上",
       "scheduledTime": "08:00",
       "date": "2026-06-11",
-      "itemIds": ["item_001"], // 連結 MedicineItem 的 ID
+      "itemIds": ["item_001"],
       "status": "pending",
       "locked": false
     };
@@ -44,7 +42,6 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
     });
   }
 
-  // 透過時段內的 itemIds 清單，去 Firestore 抓出對應的藥品詳細資料
   Future<List<MedicineItem>> _fetchMedicineItems(List<String> itemIds) async {
     List<MedicineItem> items = [];
     for (String id in itemIds) {
@@ -56,10 +53,9 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
     return items;
   }
 
-  // 處理「本時段全部已服用」點擊
   void _handleAllCompleted() async {
     await _sessionRepo.completeSession(currentSessionId);
-    _loadSession(); // 重新讀取雲端資料，觸發畫面刷新
+    _loadSession();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -72,8 +68,9 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('長者智慧用藥助手'),
-        elevation: 0,
+        title: const Text('今日用藥打卡'),
+        backgroundColor: Colors.blue,
+        centerTitle: true,
       ),
       body: FutureBuilder<DoseSession>(
         future: _sessionFuture,
@@ -86,11 +83,10 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
           }
 
           DoseSession session = snapshot.data!;
-          bool isLocked = session.locked; // 取得雲端鎖定狀態
+          bool isLocked = session.locked;
 
           return Column(
             children: [
-              // 藍色時段標題區
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -105,8 +101,6 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
                   ],
                 ),
               ),
-
-              // 動態藥品清單區域
               Expanded(
                 child: FutureBuilder<List<MedicineItem>>(
                   future: _fetchMedicineItems(session.itemIds),
@@ -114,8 +108,8 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
                     if (itemSnapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
+                    
                     if (!itemSnapshot.hasData || itemSnapshot.data!.isEmpty) {
-                      // 降級處理：如果雲端還沒建 item_001，先顯示原本的立普妥畫面供 Demo 測試
                       return ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
@@ -159,7 +153,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
                               child: Icon(Icons.medical_services, color: Colors.white),
                             ),
                             title: Text(item.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            subtitle: Text('\n${item.dosageText}\n說明：${item.plainDescription}'),
+                            subtitle: const Text('\n劑量提示\n說明：今日需服用藥物'),
                             trailing: Icon(
                               isLocked ? Icons.check_circle : Icons.radio_button_unchecked,
                               color: isLocked ? Colors.green : Colors.grey,
@@ -172,14 +166,11 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
                   },
                 ),
               ),
-
-              // 底部安全防重複按鈕機制
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton.icon(
                   onPressed: isLocked
                       ? () {
-                          // 如果已被雲端鎖定，跳出企劃書指定的警告對話框
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
