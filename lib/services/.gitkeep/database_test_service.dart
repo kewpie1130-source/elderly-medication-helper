@@ -67,17 +67,15 @@ class DatabaseTestService {
     
     // 如果瀏覽器已經允許通知權限，就直接彈窗
     if (html.Notification.permission == 'granted') {
-     html.Notification(
-        "智慧用藥助手提醒", // 第一個參數：標題
-        body: "早上 08:00 吃藥時間到囉！今天早上有 3 個品項需要確認。", // 具名參數 body
-        icon: "https://via.placeholder.com/128", // 具名參數 icon
+      html.Notification(
+        "智慧用藥助手提醒",
+        body: '早上 08:00 吃藥時間到囉！今天早上有 3 個品項需要確認。',
+        icon: 'https://via.placeholder.com/128',
       );
-      print("🧪 [Test] 🎉 實體通知已發送！請看電腦螢幕周圍有沒有跳出通知！");
+      print("📝 [Test] 🎉 實體通知已發送！請看電腦螢幕周圍有沒有跳出通知！");
     } else if (html.Notification.permission != 'denied') {
       // 如果還沒問過權限，就向使用者請求權限
-      await html.Notification.requestPermission();
+      html.Notification.requestPermission();
     }
-    
-    print('🚀 [Test] 全線整合測試一條龍圓滿完成！');
   }
 }
