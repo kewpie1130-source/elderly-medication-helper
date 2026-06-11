@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../repositories/dose_session_repository.dart';
 import '../models/dose_session.dart';
+import '../repositories/medicine_repository.dart';
+import '../models/medicine_item.dart';
 
 class DoseSessionPage extends StatefulWidget {
   const DoseSessionPage({super.key});
@@ -11,8 +13,9 @@ class DoseSessionPage extends StatefulWidget {
 
 class _DoseSessionPageState extends State<DoseSessionPage> {
   final DoseSessionRepository _sessionRepo = DoseSessionRepository();
+  final MedicineRepository _medicineRepo = MedicineRepository();
   
-  // 模擬目前要查詢的時段 ID（正式環境可動態計算日期與時段）
+  // 模擬目前要查詢的時段 ID 與日期
   final String currentSessionId = "session_20260611_morning"; 
   late Future<DoseSession> _sessionFuture;
 
@@ -23,7 +26,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
   }
 
   void _loadSession() {
-    // 企劃書規定的資料庫初始模板
+    // 企劃書規定的資料庫初始假資料模板
     Map<String, dynamic> defaultSessionData = {
       "sessionId": currentSessionId,
       "userId": "user_001",
@@ -31,7 +34,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
       "slotName": "早上",
       "scheduledTime": "08:00",
       "date": "2026-06-11",
-      "itemIds": ["item_001"], // 這裡連結 MedicineItem 的 ID
+      "itemIds": ["item_001"], // 連結 MedicineItem 的 ID
       "status": "pending",
       "locked": false
     };
@@ -41,14 +44,28 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
     });
   }
 
+  // 透過時段內的 itemIds 清單，去 Firestore 抓出對應的藥品詳細資料
+  Future<List<MedicineItem>> _fetchMedicineItems(List<String> itemIds) async {
+    List<MedicineItem> items = [];
+    for (String id in itemIds) {
+      MedicineItem? item = await _medicineRepo.getMedicineItemById(id);
+      if (item != null) {
+        items.add(item);
+      }
+    }
+    return items;
+  }
+
   // 處理「本時段全部已服用」點擊
   void _handleAllCompleted() async {
     await _sessionRepo.completeSession(currentSessionId);
     _loadSession(); // 重新讀取雲端資料，觸發畫面刷新
     
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🎉 本時段用藥紀錄已成功同步至 Firebase 雲端資料庫！')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('🎉 本時段用藥紀錄已成功同步至 Firebase 雲端資料庫！')),
+      );
+    }
   }
 
   @override
@@ -89,32 +106,70 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
                 ),
               ),
 
-              // 動態藥品清單清單（此處可進一步串接 MedicineRepository 抓取詳細藥名）
+              // 動態藥品清單區域
               Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    Card(
-                      elevation: 2,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ListTile(
-                          leading: const CircleAvatar(
-                            backgroundColor: Colors.orangeAccent,
-                            child: Icon(Icons.medical_services, color: Colors.white),
+                child: FutureBuilder<List<MedicineItem>>(
+                  future: _fetchMedicineItems(session.itemIds),
+                  builder: (context, itemSnapshot) {
+                    if (itemSnapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (!itemSnapshot.hasData || itemSnapshot.data!.isEmpty) {
+                      // 降級處理：如果雲端還沒建 item_001，先顯示原本的立普妥畫面供 Demo 測試
+                      return ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          Card(
+                            elevation: 2,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: ListTile(
+                                leading: const CircleAvatar(
+                                  backgroundColor: Colors.orangeAccent,
+                                  child: Icon(Icons.medical_services, color: Colors.white),
+                                ),
+                                title: const Text('立普妥 Lipitor (降血脂藥)', 
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                subtitle: const Text('\n一次一顆，飯後服用\n說明：每天吃完早餐後配溫開水吃一顆喔！'),
+                                trailing: Icon(
+                                  isLocked ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  color: isLocked ? Colors.green : Colors.grey,
+                                  size: 32,
+                                ),
+                              ),
+                            ),
                           ),
-                          title: const Text('立普妥 Lipitor (降血脂藥)', 
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          subtitle: const Text('\n一次一顆，飯後服用\n說明：每天吃完早餐後配溫開水吃一顆喔！'),
-                          trailing: Icon(
-                            isLocked ? Icons.check_circle : Icons.radio_button_unchecked,
-                            color: isLocked ? Colors.green : Colors.grey,
-                            size: 32,
+                        ],
+                      );
+                    }
+
+                    List<MedicineItem> medicineList = itemSnapshot.data!;
+
+                    return ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: medicineList.length,
+                      itemBuilder: (context, index) {
+                        final item = medicineList[index];
+                        return Card(
+                          elevation: 2,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading: const CircleAvatar(
+                              backgroundColor: Colors.orangeAccent,
+                              child: Icon(Icons.medical_services, color: Colors.white),
+                            ),
+                            title: Text(item.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            subtitle: Text('\n${item.dosageText}\n說明：${item.plainDescription}'),
+                            trailing: Icon(
+                              isLocked ? Icons.check_circle : Icons.radio_button_unchecked,
+                              color: isLocked ? Colors.green : Colors.grey,
+                              size: 32,
+                            ),
                           ),
-                        ),
-                      ),
-                    ),
-                  ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
 
