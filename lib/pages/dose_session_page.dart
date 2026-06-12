@@ -7,6 +7,7 @@ import '../models/medicine_item.dart';
 import '../repositories/dose_item_log_repository.dart';
 import '../repositories/dose_session_repository.dart';
 import '../repositories/medicine_repository.dart';
+import '../services/database_helper.dart';
 
 class DoseSessionPage extends StatefulWidget {
   const DoseSessionPage({super.key});
@@ -19,6 +20,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
   final DoseSessionRepository _sessionRepository = DoseSessionRepository();
   final DoseItemLogRepository _logRepository = DoseItemLogRepository();
   final MedicineRepository _medicineRepository = MedicineRepository();
+  final DatabaseHelper _database = DatabaseHelper.instance;
 
   late final _DoseSlot _slot;
   late final String _sessionId;
@@ -29,7 +31,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
     super.initState();
     _slot = _DoseSlot.forTime(DateTime.now());
     final date = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    _sessionId = 'session_${date}_${_slot.id}';
+    _sessionId = 'session_${_database.activeUserId}_${date}_${_slot.id}';
     _viewData = _loadViewData();
   }
 
@@ -40,7 +42,7 @@ class _DoseSessionPageState extends State<DoseSessionPage> {
     );
     final session = await _sessionRepository.getOrCreateSession(_sessionId, {
       'sessionId': _sessionId,
-      'userId': 'local_user',
+      'userId': _database.activeUserId,
       'slotId': _slot.id,
       'slotName': _slot.name,
       'scheduledTime': _slot.scheduledTime,

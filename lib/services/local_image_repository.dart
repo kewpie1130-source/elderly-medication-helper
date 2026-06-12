@@ -3,13 +3,23 @@ import 'dart:typed_data';
 
 import 'package:path_provider/path_provider.dart';
 
+import 'database_helper.dart';
+
 class LocalImageRepository {
   static const _albumDirectoryName = 'medication_images';
+  final DatabaseHelper _database;
+
+  LocalImageRepository({DatabaseHelper? database})
+    : _database = database ?? DatabaseHelper.instance;
 
   Future<Directory> _albumDirectory() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
+    final userId = _database.activeUserId;
+    final userDirectory = userId == 'legacy_user'
+        ? _albumDirectoryName
+        : '$_albumDirectoryName${Platform.pathSeparator}$userId';
     final albumDirectory = Directory(
-      '${documentsDirectory.path}${Platform.pathSeparator}$_albumDirectoryName',
+      '${documentsDirectory.path}${Platform.pathSeparator}$userDirectory',
     );
 
     if (!await albumDirectory.exists()) {

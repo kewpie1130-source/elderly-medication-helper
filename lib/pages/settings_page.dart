@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../models/local_user.dart';
 import '../models/medicine.dart';
 import '../services/database_helper.dart';
 
 class SettingsPage extends StatefulWidget {
   final int refreshToken;
+  final LocalUser currentUser;
   final VoidCallback onDataChanged;
+  final Future<void> Function() onSignOut;
 
   const SettingsPage({
     super.key,
     required this.refreshToken,
+    required this.currentUser,
     required this.onDataChanged,
+    required this.onSignOut,
   });
 
   @override
@@ -145,6 +150,53 @@ class _SettingsPageState extends State<SettingsPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(
+                color: const Color(0xFFE3F2FD),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: const CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Color(0xFFBBDEFB),
+                    child: Icon(Icons.person, color: Color(0xFF1565C0)),
+                  ),
+                  title: Text(
+                    widget.currentUser.shortLabel,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'EMAIL: ${widget.currentUser.email}\n'
+                    '建立時間: ${widget.currentUser.createdAt}',
+                    style: const TextStyle(fontSize: 16, height: 1.4),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: widget.onSignOut,
+                      icon: const Icon(Icons.switch_account_outlined),
+                      label: const Text('切換帳號'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                      ),
+                      onPressed: widget.onSignOut,
+                      icon: const Icon(Icons.logout),
+                      label: const Text('登出'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Card(
                 color: const Color(0xFFE8F5E9),
                 child: ListTile(

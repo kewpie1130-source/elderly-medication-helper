@@ -1,19 +1,50 @@
 import 'package:flutter/material.dart';
 
+import 'models/local_user.dart';
 import 'pages/admin_dashboard_page.dart';
 import 'pages/history_page.dart';
 import 'pages/home_page.dart';
+import 'pages/local_login_page.dart';
 import 'pages/reminder_page.dart';
 import 'pages/scan_page.dart';
 import 'pages/settings_page.dart';
+import 'services/database_helper.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final DatabaseHelper _database = DatabaseHelper.instance;
+  late Future<LocalUser?> _activeUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeUser = _database.restoreActiveUser();
+  }
+
+  void _setActiveUser(LocalUser user) {
+    setState(() {
+      _activeUser = Future.value(user);
+    });
+  }
+
+  Future<void> _signOut() async {
+    await _database.signOut();
+    if (!mounted) return;
+    setState(() {
+      _activeUser = Future<LocalUser?>.value(null);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,13 +56,38 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF4F8F4),
         useMaterial3: true,
       ),
-      home: const MainNavigationPage(),
+      home: FutureBuilder<LocalUser?>(
+        future: _activeUser,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final user = snapshot.data;
+          if (user == null) {
+            return LocalLoginPage(onSignedIn: _setActiveUser);
+          }
+          return MainNavigationPage(
+            key: ValueKey(user.userId),
+            currentUser: user,
+            onSignOut: _signOut,
+          );
+        },
+      ),
     );
   }
 }
 
 class MainNavigationPage extends StatefulWidget {
-  const MainNavigationPage({super.key});
+  final LocalUser currentUser;
+  final Future<void> Function() onSignOut;
+
+  const MainNavigationPage({
+    super.key,
+    required this.currentUser,
+    required this.onSignOut,
+  });
 
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
@@ -57,7 +113,12 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       ReminderPage(refreshToken: _refreshToken, onDataChanged: _refreshData),
       HistoryPage(refreshToken: _refreshToken),
       const AdminDashboardPage(),
-      SettingsPage(refreshToken: _refreshToken, onDataChanged: _refreshData),
+      SettingsPage(
+        refreshToken: _refreshToken,
+        currentUser: widget.currentUser,
+        onDataChanged: _refreshData,
+        onSignOut: widget.onSignOut,
+      ),
     ];
 
     return Scaffold(
