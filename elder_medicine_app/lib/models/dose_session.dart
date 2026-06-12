@@ -53,7 +53,34 @@ class DoseSession {
     required this.caregiverNotified,
 
   });
-
+/// 提供 copyWith 方法，用來修改 final 物件的特定欄位並產生新實例
+  DoseSession copyWith({
+    String? sessionId,
+    String? userId,
+    String? slotId,
+    String? slotName,
+    String? scheduledTime,
+    String? date,
+    List<String>? itemIds,
+    String? status,
+    bool? locked,
+    bool? reminderTriggered,
+    bool? caregiverNotified,
+  }) {
+    return DoseSession(
+      sessionId: sessionId ?? this.sessionId,
+      userId: userId ?? this.userId,
+      slotId: slotId ?? this.slotId,
+      slotName: slotName ?? this.slotName,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      date: date ?? this.date,
+      itemIds: itemIds ?? this.itemIds,
+      status: status ?? this.status,
+      locked: locked ?? this.locked,
+      reminderTriggered: reminderTriggered ?? this.reminderTriggered,
+      caregiverNotified: caregiverNotified ?? this.caregiverNotified,
+    );
+  }
 
 
   factory DoseSession.fromJson(Map<String, dynamic> json) {
