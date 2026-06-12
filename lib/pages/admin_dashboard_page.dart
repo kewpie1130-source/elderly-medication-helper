@@ -121,7 +121,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('D組 - 後台管理系統 ($_dateRange)'),
+        title: Text('Dashboard 分析 - 示範資料 ($_dateRange)'),
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.calendar_today),

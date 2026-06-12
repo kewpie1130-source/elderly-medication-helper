@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'pages/admin_dashboard_page.dart';
 import 'pages/history_page.dart';
 import 'pages/home_page.dart';
 import 'pages/reminder_page.dart';
@@ -55,6 +56,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       ScanPage(onDataChanged: _refreshData),
       ReminderPage(refreshToken: _refreshToken, onDataChanged: _refreshData),
       HistoryPage(refreshToken: _refreshToken),
+      const AdminDashboardPage(),
       SettingsPage(refreshToken: _refreshToken, onDataChanged: _refreshData),
     ];
 
@@ -84,6 +86,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
             label: '紀錄',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics),
+            label: '分析',
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),

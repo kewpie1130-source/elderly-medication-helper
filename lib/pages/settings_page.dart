@@ -145,6 +145,27 @@ class _SettingsPageState extends State<SettingsPage> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(
+                color: const Color(0xFFE8F5E9),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(16),
+                  leading: const Icon(
+                    Icons.storage_outlined,
+                    size: 42,
+                    color: Color(0xFF2E7D32),
+                  ),
+                  title: const Text(
+                    'SQLite 本機資料庫',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    '資料庫：smart_medication.db\n'
+                    '目前儲存 ${medicines.length} 筆用藥資料',
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 height: 58,
                 child: ElevatedButton.icon(
