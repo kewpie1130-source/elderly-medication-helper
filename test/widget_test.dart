@@ -16,5 +16,10 @@ void main() {
     expect(find.text('新增'), findsOneWidget);
     expect(find.text('提醒'), findsOneWidget);
     expect(find.text('紀錄'), findsOneWidget);
+
+    await tester.tap(find.text('提醒'));
+    await tester.pump();
+
+    expect(find.text('開始本時段用藥打卡'), findsOneWidget);
   });
 }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/medicine.dart';
 import '../models/taken_record.dart';
 import '../services/database_helper.dart';
+import 'dose_session_page.dart';
 
 class ReminderPage extends StatefulWidget {
   final int refreshToken;
@@ -109,60 +110,90 @@ class _ReminderPageState extends State<ReminderPage> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
-      body: FutureBuilder<List<Medicine>>(
-        future: _medicines,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return _Message(text: '用藥資料讀取失敗：${snapshot.error}');
-          }
-
-          final medicines = snapshot.data ?? const <Medicine>[];
-          if (medicines.isEmpty) {
-            return const _Message(text: '目前尚無用藥資料');
-          }
-
-          return RefreshIndicator(
-            onRefresh: () async => setState(_load),
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _PeriodSection(
-                  title: '早上',
-                  icon: Icons.wb_sunny,
-                  color: Colors.orange,
-                  medicines: medicines.where((item) => item.morning).toList(),
-                  onTaken: (medicine) => _markTaken(medicine, '早上'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const DoseSessionPage(),
                 ),
-                _PeriodSection(
-                  title: '中午',
-                  icon: Icons.wb_sunny_outlined,
-                  color: Colors.amber.shade700,
-                  medicines: medicines.where((item) => item.noon).toList(),
-                  onTaken: (medicine) => _markTaken(medicine, '中午'),
-                ),
-                _PeriodSection(
-                  title: '晚上',
-                  icon: Icons.nights_stay,
-                  color: Colors.indigo,
-                  medicines: medicines.where((item) => item.evening).toList(),
-                  onTaken: (medicine) => _markTaken(medicine, '晚上'),
-                ),
-                _PeriodSection(
-                  title: '睡前',
-                  icon: Icons.bedtime,
-                  color: Colors.purple,
-                  medicines: medicines
-                      .where((item) => item.beforeSleep)
-                      .toList(),
-                  onTaken: (medicine) => _markTaken(medicine, '睡前'),
-                ),
-              ],
+              ),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text(
+                '開始本時段用藥打卡',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(double.infinity, 56),
+              ),
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: FutureBuilder<List<Medicine>>(
+              future: _medicines,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return _Message(text: '用藥資料讀取失敗：${snapshot.error}');
+                }
+
+                final medicines = snapshot.data ?? const <Medicine>[];
+                if (medicines.isEmpty) {
+                  return const _Message(text: '目前尚無用藥資料');
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async => setState(_load),
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _PeriodSection(
+                        title: '早上',
+                        icon: Icons.wb_sunny,
+                        color: Colors.orange,
+                        medicines: medicines
+                            .where((item) => item.morning)
+                            .toList(),
+                        onTaken: (medicine) => _markTaken(medicine, '早上'),
+                      ),
+                      _PeriodSection(
+                        title: '中午',
+                        icon: Icons.wb_sunny_outlined,
+                        color: Colors.amber.shade700,
+                        medicines: medicines
+                            .where((item) => item.noon)
+                            .toList(),
+                        onTaken: (medicine) => _markTaken(medicine, '中午'),
+                      ),
+                      _PeriodSection(
+                        title: '晚上',
+                        icon: Icons.nights_stay,
+                        color: Colors.indigo,
+                        medicines: medicines
+                            .where((item) => item.evening)
+                            .toList(),
+                        onTaken: (medicine) => _markTaken(medicine, '晚上'),
+                      ),
+                      _PeriodSection(
+                        title: '睡前',
+                        icon: Icons.bedtime,
+                        color: Colors.purple,
+                        medicines: medicines
+                            .where((item) => item.beforeSleep)
+                            .toList(),
+                        onTaken: (medicine) => _markTaken(medicine, '睡前'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
