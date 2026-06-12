@@ -53,7 +53,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   Widget build(BuildContext context) {
     final pages = [
       HomePage(refreshToken: _refreshToken, onSelectTab: _selectTab),
-      ScanPage(onDataChanged: _refreshData),
+      ScanPage(onDataChanged: _refreshData, onViewHistory: () => _selectTab(3)),
       ReminderPage(refreshToken: _refreshToken, onDataChanged: _refreshData),
       HistoryPage(refreshToken: _refreshToken),
       const AdminDashboardPage(),

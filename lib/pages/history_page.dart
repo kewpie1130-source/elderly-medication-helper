@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../models/medicine.dart';
 import '../models/taken_record.dart';
 import '../services/database_helper.dart';
+import 'medicine_history_detail_page.dart';
 
 class HistoryPage extends StatefulWidget {
   final int refreshToken;
@@ -45,6 +46,17 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
+  Future<void> _openMedicine(Medicine medicine) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => MedicineHistoryDetailPage(medicine: medicine),
+      ),
+    );
+    if (mounted) {
+      setState(_load);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -80,7 +92,12 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (data.medicines.isEmpty)
                   const _EmptyCard(text: '目前尚無已儲存用藥資料')
                 else
-                  ...data.medicines.map(_MedicineCard.new),
+                  ...data.medicines.map(
+                    (medicine) => _MedicineCard(
+                      medicine,
+                      onTap: () => _openMedicine(medicine),
+                    ),
+                  ),
                 const SizedBox(height: 20),
                 const _SectionTitle(title: '服藥紀錄'),
                 if (data.records.isEmpty)
@@ -122,8 +139,9 @@ class _SectionTitle extends StatelessWidget {
 
 class _MedicineCard extends StatelessWidget {
   final Medicine medicine;
+  final VoidCallback onTap;
 
-  const _MedicineCard(this.medicine);
+  const _MedicineCard(this.medicine, {required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -131,6 +149,7 @@ class _MedicineCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
+        onTap: onTap,
         contentPadding: const EdgeInsets.all(16),
         leading: const CircleAvatar(
           radius: 27,
@@ -157,6 +176,7 @@ class _MedicineCard extends StatelessWidget {
             style: const TextStyle(fontSize: 16, height: 1.5),
           ),
         ),
+        trailing: const Icon(Icons.chevron_right),
       ),
     );
   }

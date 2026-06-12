@@ -66,17 +66,47 @@ class DatabaseHelper {
     return id;
   }
 
+  Future<Medicine?> findPotentialDuplicate(Medicine medicine) async {
+    final db = await database;
+    final imagePath = medicine.imagePath.trim();
+    final rows = await db.query(
+      'medicines',
+      where:
+          "(? != '' AND imagePath = ?) OR "
+          '(medicineName = ? AND dosage = ? AND frequency = ?)',
+      whereArgs: [
+        imagePath,
+        imagePath,
+        medicine.medicineName.trim(),
+        medicine.dosage.trim(),
+        medicine.frequency.trim(),
+      ],
+      orderBy: 'createdAt DESC',
+      limit: 1,
+    );
+    return rows.isEmpty ? null : Medicine.fromMap(rows.first);
+  }
+
   Future<int> updateMedicine(Medicine medicine) async {
     if (medicine.id == null) {
       throw ArgumentError('Medicine id is required for update.');
     }
     final db = await database;
-    return db.update(
-      'medicines',
-      medicine.toMap()..remove('id'),
-      where: 'id = ?',
-      whereArgs: [medicine.id],
-    );
+    return db.transaction((transaction) async {
+      final updatedRows = await transaction.update(
+        'medicines',
+        medicine.toMap()..remove('id'),
+        where: 'id = ?',
+        whereArgs: [medicine.id],
+      );
+      await transaction.update(
+        'taken_records',
+        {'medicineName': medicine.medicineName},
+        where: 'medicineId = ?',
+        whereArgs: [medicine.id],
+      );
+      return updatedRows;
+    });
   }
 
   Future<List<Medicine>> getMedicines() async {

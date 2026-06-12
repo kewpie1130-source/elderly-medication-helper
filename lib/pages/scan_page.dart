@@ -13,9 +13,17 @@ import 'image_history_page.dart';
 
 class ScanPage extends StatefulWidget {
   final File? initialImage;
+  final Medicine? initialMedicine;
   final VoidCallback? onDataChanged;
+  final VoidCallback? onViewHistory;
 
-  const ScanPage({super.key, this.initialImage, this.onDataChanged});
+  const ScanPage({
+    super.key,
+    this.initialImage,
+    this.initialMedicine,
+    this.onDataChanged,
+    this.onViewHistory,
+  });
 
   @override
   State<ScanPage> createState() => _ScanPageState();
@@ -42,6 +50,7 @@ class _ScanPageState extends State<ScanPage> {
   final _ocrTextController = TextEditingController();
 
   File? _selectedImage;
+  Medicine? _persistedMedicine;
   bool _isBusy = false;
   bool _hasOcrResult = false;
   bool _morning = false;
@@ -54,7 +63,18 @@ class _ScanPageState extends State<ScanPage> {
   @override
   void initState() {
     super.initState();
-    _selectedImage = widget.initialImage;
+    final initialMedicine = widget.initialMedicine;
+    _persistedMedicine = initialMedicine;
+    _selectedImage =
+        widget.initialImage ??
+        (initialMedicine != null && initialMedicine.imagePath.isNotEmpty
+            ? File(initialMedicine.imagePath)
+            : null);
+    if (initialMedicine != null) {
+      _ocrTextController.text = initialMedicine.ocrText;
+      _applyParsedMedicine(initialMedicine);
+      _hasOcrResult = true;
+    }
     if (_selectedImage == null) {
       _loadSampleImage();
     }
@@ -182,6 +202,7 @@ class _ScanPageState extends State<ScanPage> {
     setState(() => _isBusy = true);
     try {
       final medicine = Medicine(
+        id: _persistedMedicine?.id,
         patientName: _patientNameController.text.trim(),
         clinicName: _clinicNameController.text.trim(),
         medicineName: _medicineNameController.text.trim(),
@@ -199,18 +220,69 @@ class _ScanPageState extends State<ScanPage> {
         notes: _notesController.text.trim(),
         imagePath: _selectedImage?.path ?? '',
         ocrText: _ocrTextController.text.trim(),
-        createdAt: DateTime.now().toIso8601String(),
+        createdAt:
+            _persistedMedicine?.createdAt ?? DateTime.now().toIso8601String(),
       );
       debugPrint('【Medicine建立成功】${medicine.toMap()}');
-      await _database.insertMedicine(medicine);
+      if (medicine.id == null) {
+        final duplicate = await _database.findPotentialDuplicate(medicine);
+        if (duplicate != null && mounted) {
+          final shouldSave = await _confirmDuplicateSave(duplicate);
+          if (shouldSave != true) return;
+        }
+        final id = await _database.insertMedicine(medicine);
+        _persistedMedicine = medicine.copyWith(id: id);
+      } else {
+        await _database.updateMedicine(medicine);
+        _persistedMedicine = medicine;
+      }
       widget.onDataChanged?.call();
       if (!mounted) return;
-      _showMessage('用藥資料已儲存');
+      _showMessage(medicine.id == null ? '用藥資料已儲存' : '用藥資料已更新');
+      if (widget.initialMedicine != null && Navigator.canPop(context)) {
+        Navigator.pop(context, _persistedMedicine);
+      } else {
+        setState(() {});
+      }
     } catch (error) {
       if (!mounted) return;
       _showError('用藥資料儲存失敗：$error');
     } finally {
       if (mounted) setState(() => _isBusy = false);
+    }
+  }
+
+  Future<bool?> _confirmDuplicateSave(Medicine duplicate) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('可能是重複資料'),
+        content: Text(
+          '已找到相同的用藥紀錄「${duplicate.medicineName}」。'
+          '若只是重複按到儲存，請返回；確認是不同療程時才繼續新增。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('返回檢查'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('仍要新增'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _viewSavedMedicine() {
+    final onViewHistory = widget.onViewHistory;
+    if (onViewHistory != null) {
+      onViewHistory();
+      return;
+    }
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, _persistedMedicine);
     }
   }
 
@@ -241,9 +313,9 @@ class _ScanPageState extends State<ScanPage> {
         automaticallyImplyLeading: Navigator.canPop(context),
         backgroundColor: _green,
         foregroundColor: Colors.white,
-        title: const Text(
-          '新增用藥影像',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          widget.initialMedicine == null ? '新增用藥影像' : '編輯用藥資料',
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
@@ -326,15 +398,30 @@ class _ScanPageState extends State<ScanPage> {
                     ),
                     onPressed: _saveMedicine,
                     icon: const Icon(Icons.save_outlined, size: 28),
-                    label: const Text(
-                      '儲存用藥資料',
-                      style: TextStyle(
+                    label: Text(
+                      _persistedMedicine == null ? '儲存用藥資料' : '更新用藥資料',
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                 ),
+                if (_persistedMedicine != null &&
+                    widget.initialMedicine == null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 56,
+                    child: OutlinedButton.icon(
+                      onPressed: _viewSavedMedicine,
+                      icon: const Icon(Icons.history_outlined),
+                      label: const Text(
+                        '前往用藥紀錄查看',
+                        style: TextStyle(fontSize: 18),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
