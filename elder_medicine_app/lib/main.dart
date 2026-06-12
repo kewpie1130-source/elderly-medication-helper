@@ -1,9 +1,15 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart'; //  必須要有這行，否則 Icons 和 Widget 都會失效
+import 'package:elder_medicine_app/services/notification_manager.dart';
 
 void main() {
-  runApp(const MyApp());
-}
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // 2. 初始化並啟動監控定時器
+  final notificationManager = NotificationManager();
+  notificationManager.startReminderPolling();
 
+  runApp(const MyApp()); // 這是你原本就有的 runApp
+}
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
