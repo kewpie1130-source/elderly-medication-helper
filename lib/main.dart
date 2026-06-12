@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+// ➕ 補上這行關鍵匯入，修正 DoseSessionPage 的紅線錯誤！
 import 'pages/dose_session_page.dart';
 
 void main() async {
@@ -24,7 +25,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const DoseSessionPage(),
+      home: const DoseSessionPage(), // 存檔後紅線即會消失！
     );
   }
 }
