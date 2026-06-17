@@ -12,7 +12,7 @@ class ReminderPage extends StatefulWidget {
   State<ReminderPage> createState() => _ReminderPageState();
 }
 
-class _MirrorPageState extends State<ReminderPage> {
+class _ReminderPageState extends State<ReminderPage> {
   final TtsService _ttsService = TtsService();
   final NotificationService _notificationService = NotificationService();
   final LineService _lineService = LineService();
