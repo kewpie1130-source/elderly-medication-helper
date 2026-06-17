@@ -16,7 +16,7 @@ class MedicineDetailPage extends StatefulWidget {
 
 class _MedicineDetailPageState extends State<MedicineDetailPage> {
   final MedicineRepository _repository = MedicineRepository();
-  bool _isTtsEnabled = false; // 控制語音播報開關狀態
+  bool _isTtsEnabled = false; 
 
   Future<void> _handleDoseLog() async {
     final now = DateTime.now().toIso8601String();
@@ -49,29 +49,32 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       appBar: AppBar(
-        title: const Text('藥品資訊內容', style: TextStyle(fontSize: 24, fontWeight: 'bold')),
+        title: const Text('藥品資訊內容頁', style: TextStyle(fontSize: 22, fontWeight: 'bold')),
         backgroundColor: AppTheme.primaryColor,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
-          // 上半部滾動內容區
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 1. 藥品大圖示與名稱卡片（仿照設計圖上方大卡片）
+                  // 頂部藥品名稱大卡片（完美對齊設計圖樣式）
                   Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                     color: Colors.white,
                     child: Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.medication, size: 80, color: AppTheme.primaryColor),
+                          const Icon(Icons.medication, size: 70, color: AppTheme.primaryColor),
                           const SizedBox(height: 12),
                           Text(
                             med.name,
@@ -82,44 +85,46 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
 
-                  // 2. 依照設計圖欄位順序呈現之資訊條
-                  _buildInfoTile(Icons.assignment, '適應症', med.indication.isEmpty ? '無' : med.indication),
-                  _buildInfoTile(Icons.medical_services, '用法與用量', med.dosage),
-                  _buildInfoTile(Icons.warning, '注意事項 / 禁忌', med.notice, isWarning: true),
-                  _buildInfoTile(Icons.category, '藥物類型', med.type),
-                  _buildInfoTile(Icons.calendar_month, '預計用完日期', med.endDate),
+                  // 依據規格與設計圖要求呈現的詳細資訊條
+                  _buildInfoTile(Icons.assignment_turned_in_outlined, '適應症', med.indication.isEmpty ? '無' : med.indication),
+                  _buildInfoTile(Icons.mode_edit_outline, '用法與用量', med.dosage),
+                  _buildInfoTile(Icons.repeat, '服用頻率', med.frequency),
+                  _buildInfoTile(Icons.access_time, '服用時間', med.timing.join('、')),
+                  _buildInfoTile(Icons.error_outline, '注意事項 / 禁忌', med.notice, isWarning: true),
+                  _buildInfoTile(Icons.category_outlined, '藥物類型', med.type),
+                  _buildInfoTile(Icons.calendar_today_outlined, '開始日期', med.startDate),
+                  _buildInfoTile(Icons.calendar_month_outlined, '預計用完日期', med.endDate),
                 ],
               ),
             ),
           ),
 
-          // 3. 底部並排雙大按鈕（完美還原 ui_reference.png 設計）
+          // 底部並排雙大按鈕（完美還原設計圖2：綠色打卡與播報按鈕）
           Container(
             padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24, top: 10),
-            color: AppTheme.backgroundColor,
+            color: Colors.white,
             child: Row(
               children: [
-                // 左按鈕：打卡（已服藥）
                 Expanded(
                   child: SizedBox(
-                    height: 65, // 高度大於 56px 方便長者點擊
+                    height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor, // 綠色背景
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        elevation: 3,
+                        backgroundColor: AppTheme.primaryColor,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        elevation: 1,
                       ),
                       onPressed: _handleDoseLog,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.check, size: 28, color: Colors.white),
-                          SizedBox(width: 6),
+                          SizedBox(width: 8),
                           Text(
                             '打卡\n(已服藥)', 
-                            style: TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.2),
+                            style: TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.1),
                             textAlign: Center,
                           ),
                         ],
@@ -127,37 +132,29 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
-                
-                // 右按鈕：播報（語音開關）
+                const SizedBox(width: 12),
                 Expanded(
                   child: SizedBox(
-                    height: 65,
+                    height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _isTtsEnabled ? AppTheme.primaryColor : Colors.grey.shade600, // 依據狀態變色
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        elevation: 3,
+                        backgroundColor: _isTtsEnabled ? AppTheme.primaryColor : Colors.grey.shade600,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        elevation: 1,
                       ),
                       onPressed: () {
                         setState(() {
                           _isTtsEnabled = !_isTtsEnabled;
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(_isTtsEnabled ? '🔊 語音播報已開啟' : '🔇 語音播報已關閉', style: const TextStyle(fontSize: 16)),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(_isTtsEnabled ? Icons.volume_up : Icons.volume_off, size: 28, color: Colors.white),
-                          const SizedBox(width: 6),
+                          const SizedBox(width: 8),
                           Text(
                             _isTtsEnabled ? '播報\n(語音開啟)' : '播報\n(語音關閉)',
-                            style: const TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.2),
+                            style: const TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.1),
                             textAlign: Center,
                           ),
                         ],
@@ -174,30 +171,29 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
   }
 
   Widget _buildInfoTile(IconData icon, String title, String content, {bool isWarning = false}) {
-    return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 28, color: isWarning ? Colors.orange : AppTheme.primaryColor),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: 'bold')),
-                  const SizedBox(height: 4),
-                  Text(content, style: TextStyle(fontSize: 18, color: isWarning ? Colors.red : AppTheme.textColor, fontWeight: 'bold')),
-                ],
-              ),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.all(14.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 26, color: isWarning ? Colors.red.shade400 : AppTheme.primaryColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: 'w500')),
+                const SizedBox(height: 2),
+                Text(content, style: TextStyle(fontSize: 18, color: isWarning ? Colors.red : AppTheme.textColor, fontWeight: 'bold')),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
