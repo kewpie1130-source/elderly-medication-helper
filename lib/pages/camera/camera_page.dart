@@ -1,3 +1,4 @@
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -7,8 +8,6 @@ import '../../services/ocr/ocr_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
-// [邱靖喻] 首頁相機拍攝頁，禁止其他組員修改
-// 整合第零步備份的相機邏輯
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
 
@@ -21,55 +20,122 @@ class _CameraPageState extends State<CameraPage> {
   final OcrService _ocrService = OcrService();
   final GeminiService _geminiService = GeminiService();
 
+  CameraController? _cameraController;
+  FlashMode _flashMode = FlashMode.auto;
+  bool _isCameraReady = false;
   bool _isProcessing = false;
+  String? _cameraError;
 
-  Future<void> _pickFromCamera() async {
-    if (_isProcessing) return;
+  @override
+  void initState() {
+    super.initState();
+    _initializeCamera();
+  }
 
-    final xFile = await _imagePicker.pickImage(
-      source: ImageSource.camera,
-      imageQuality: 85,
-    );
-    if (xFile == null) return;
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) {
+        if (mounted) {
+          setState(() => _cameraError = '找不到可用相機');
+        }
+        return;
+      }
 
-    await _processImage(xFile);
+      final controller = CameraController(
+        cameras.first,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await controller.initialize();
+      await controller.setFlashMode(_flashMode);
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+
+      setState(() {
+        _cameraController = controller;
+        _isCameraReady = true;
+        _cameraError = null;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() => _cameraError = '相機初始化失敗：$error');
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _takePicture() async {
+    if (_isProcessing || !_isCameraReady) return;
+
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    try {
+      final xFile = await controller.takePicture();
+      await _processImage(xFile);
+    } catch (error) {
+      if (!mounted) return;
+      _showError('拍攝失敗：$error');
+    }
   }
 
   Future<void> _pickFromGallery() async {
     if (_isProcessing) return;
 
-    final xFile = await _imagePicker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 85,
-    );
-    if (xFile == null) return;
+    try {
+      final xFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+      if (xFile == null) return;
 
-    await _processImage(xFile);
+      await _processImage(xFile);
+    } catch (error) {
+      if (!mounted) return;
+      _showError('相簿匯入失敗：$error');
+    }
   }
 
   Future<void> _processImage(XFile imageFile) async {
     setState(() => _isProcessing = true);
 
+    var dialogShown = false;
     try {
+      _showLoadingDialog();
+      dialogShown = true;
+
       final ocrText = await _ocrService.recognizeText(imageFile);
       final medicine = await _geminiService.parseOcrResult(ocrText);
 
       if (!mounted) return;
+      if (dialogShown) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogShown = false;
+      }
+
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => MedicinePlaceholderPage(medicine: medicine),
         ),
       );
-      // TODO [組員A]：替換為真正的 MedicineDetailPage
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('辨識失敗：$error'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (dialogShown) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogShown = false;
+      }
+      _showError('辨識失敗：$error');
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -77,29 +143,68 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
+  Future<void> _toggleFlash() async {
+    final controller = _cameraController;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    final nextMode = switch (_flashMode) {
+      FlashMode.auto => FlashMode.always,
+      FlashMode.always => FlashMode.off,
+      _ => FlashMode.auto,
+    };
+
+    try {
+      await controller.setFlashMode(nextMode);
+      if (mounted) {
+        setState(() => _flashMode = nextMode);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      _showError('閃光燈切換失敗：$error');
+    }
+  }
+
+  void _showLoadingDialog() {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppTheme.primary),
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          const ColoredBox(color: Colors.black),
-          Center(
+          _buildCameraPreview(),
+          _buildTopBar(),
+          const Center(
             child: SizedBox(
               width: 280,
-              height: 180,
+              height: 200,
               child: CustomPaint(
-                painter: const _ScanFramePainter(),
-                child: const Center(
+                painter: _ScanFramePainter(),
+                child: Center(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32),
+                    padding: EdgeInsets.symmetric(horizontal: 28),
                     child: Text(
-                      '請對準藥袋／藥盒／保健食品',
+                      '請對準 藥袋 / 藥盒 / 保健食品外包裝',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -107,94 +212,174 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
           ),
-          const SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: EdgeInsets.only(top: 16),
-                child: Text(
-                  '長者智慧用藥',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (_isProcessing)
-            const ColoredBox(
-              color: Color(0x99000000),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      '辨識中，請稍候...',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
-      bottomNavigationBar: Container(
-        height: 120,
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
+      bottomNavigationBar: _buildBottomControls(),
+    );
+  }
+
+  Widget _buildCameraPreview() {
+    final controller = _cameraController;
+    if (_cameraError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _cameraError!,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 16),
+          ),
+        ),
+      );
+    }
+
+    if (!_isCameraReady || controller == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
+    }
+
+    final previewSize = controller.value.previewSize;
+    if (previewSize == null) {
+      return CameraPreview(controller);
+    }
+
+    return ClipRect(
+      child: FittedBox(
+        fit: BoxFit.cover,
+        child: SizedBox(
+          width: previewSize.height,
+          height: previewSize.width,
+          child: CameraPreview(controller),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: _toggleFlash,
+              icon: const Icon(Icons.flash_auto, color: Colors.white),
+              tooltip: '切換閃光燈',
+            ),
+            const Expanded(
+              child: Text(
+                '智慧用藥助手',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 48),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomControls() {
+    return Container(
+      height: 140,
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: SafeArea(
+        top: false,
         child: Row(
           children: [
             Expanded(
-              child: GestureDetector(
+              child: _BottomActionButton(
+                icon: Icons.photo_library_outlined,
+                label: '相簿匯入',
                 onTap: _pickFromGallery,
-                behavior: HitTestBehavior.opaque,
-                child: const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.photo_library_outlined,
-                      size: 32,
-                      color: AppTheme.primary,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '相簿',
-                      style: TextStyle(fontSize: 14),
-                    ),
-                  ],
-                ),
               ),
             ),
             Expanded(
               child: Center(
                 child: GestureDetector(
-                  onTap: _pickFromCamera,
+                  onTap: _isProcessing ? null : _takePicture,
                   child: Container(
                     width: 80,
                     height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primary,
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x33000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 36,
+                    child: Container(
+                      margin: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        color: Colors.white,
+                        size: 36,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            const Expanded(child: SizedBox()),
+            Expanded(
+              child: _BottomActionButton(
+                icon: Icons.flashlight_on_outlined,
+                label: '手電筒',
+                onTap: _toggleFlash,
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BottomActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _BottomActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: AppTheme.primary, size: 32),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppTheme.primary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -203,13 +388,13 @@ class _CameraPageState extends State<CameraPage> {
 class _ScanFramePainter extends CustomPainter {
   const _ScanFramePainter();
 
-  static const double _cornerLength = 24;
+  static const double _cornerLength = 20;
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = AppTheme.primary
-      ..strokeWidth = 4
+      ..strokeWidth = 3
       ..strokeCap = StrokeCap.square
       ..style = PaintingStyle.stroke;
 
@@ -234,31 +419,26 @@ class _ScanFramePainter extends CustomPainter {
   bool shouldRepaint(covariant _ScanFramePainter oldDelegate) => false;
 }
 
-// TODO [組員A]：此頁面由組員A實作完整版本後刪除
+// TODO [組員A]：替換為真正的 MedicineDetailPage
 class MedicinePlaceholderPage extends StatelessWidget {
   final MedicineModel medicine;
 
-  const MedicinePlaceholderPage({
-    super.key,
-    required this.medicine,
-  });
+  const MedicinePlaceholderPage({super.key, required this.medicine});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('藥品資訊（暫時頁面）'),
-      ),
+      appBar: AppBar(title: const Text('辨識結果')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _MedicineField(label: '名稱', value: medicine.name),
+          _MedicineField(label: '藥品名稱', value: medicine.name),
           const SizedBox(height: 12),
-          _MedicineField(label: '類型', value: medicine.type),
+          _MedicineField(label: '藥物類型', value: medicine.type),
           const SizedBox(height: 12),
-          _MedicineField(label: '每次劑量', value: medicine.dosage),
+          _MedicineField(label: '用法用量', value: medicine.dosage),
           const SizedBox(height: 12),
-          _MedicineField(label: '服用頻率', value: medicine.frequency),
+          _MedicineField(label: '使用頻率', value: medicine.frequency),
           const SizedBox(height: 12),
           _MedicineField(label: '注意事項', value: medicine.notice),
         ],
@@ -271,10 +451,7 @@ class _MedicineField extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MedicineField({
-    required this.label,
-    required this.value,
-  });
+  const _MedicineField({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -292,7 +469,7 @@ class _MedicineField extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            value.isEmpty ? '未辨識' : value,
+            value.isEmpty ? '尚未辨識' : value,
             style: const TextStyle(
               color: AppTheme.textDark,
               fontSize: AppTheme.bodyFontSize,
