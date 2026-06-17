@@ -48,10 +48,13 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 24),
           // 設定清單
+          _buildSettingsTile(Icons.login, "登入 / 登出", () => print("執行登入/登出")),
           _buildSettingsTile(Icons.image, "大頭貼更改", () => print("開啟相簿")),
           _buildSettingsTile(Icons.contacts, "聯絡人設定", () => print("設定 LINE 聯絡人")),
+          _buildSettingsTile(Icons.notifications_active, "通知偏好設定", () => print("進入通知設定")),
+          _buildSettingsTile(Icons.text_fields, "調整字體大小", () => print("調整字體")),
           _buildSettingsTile(Icons.language, "語言設定: ", _showLanguageDialog),
-          _buildSettingsTile(Icons.logout, "登出", () => print("執行登出")),
+          _buildSettingsTile(Icons.info_outline, "關於與隱私權", () => print("查看關於頁")),
         ],
       ),
     );
