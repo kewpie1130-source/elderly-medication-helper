@@ -21,7 +21,6 @@ class _CameraPageState extends State<CameraPage> {
   final GeminiService _geminiService = GeminiService();
 
   CameraController? _cameraController;
-  FlashMode _flashMode = FlashMode.auto;
   bool _isCameraReady = false;
   bool _isProcessing = false;
   String? _cameraError;
@@ -49,7 +48,6 @@ class _CameraPageState extends State<CameraPage> {
       );
 
       await controller.initialize();
-      await controller.setFlashMode(_flashMode);
 
       if (!mounted) {
         await controller.dispose();
@@ -140,27 +138,6 @@ class _CameraPageState extends State<CameraPage> {
       if (mounted) {
         setState(() => _isProcessing = false);
       }
-    }
-  }
-
-  Future<void> _toggleFlash() async {
-    final controller = _cameraController;
-    if (controller == null || !controller.value.isInitialized) return;
-
-    final nextMode = switch (_flashMode) {
-      FlashMode.auto => FlashMode.always,
-      FlashMode.always => FlashMode.off,
-      _ => FlashMode.auto,
-    };
-
-    try {
-      await controller.setFlashMode(nextMode);
-      if (mounted) {
-        setState(() => _flashMode = nextMode);
-      }
-    } catch (error) {
-      if (!mounted) return;
-      _showError('閃光燈切換失敗：$error');
     }
   }
 
@@ -262,11 +239,7 @@ class _CameraPageState extends State<CameraPage> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         child: Row(
           children: [
-            IconButton(
-              onPressed: _toggleFlash,
-              icon: const Icon(Icons.flash_auto, color: Colors.white),
-              tooltip: '切換閃光燈',
-            ),
+            const SizedBox(width: 48),
             const Expanded(
               child: Text(
                 '智慧用藥助手',
@@ -336,11 +309,7 @@ class _CameraPageState extends State<CameraPage> {
               ),
             ),
             Expanded(
-              child: _BottomActionButton(
-                icon: Icons.flashlight_on_outlined,
-                label: '手電筒',
-                onTap: _toggleFlash,
-              ),
+              child: const SizedBox(),
             ),
           ],
         ),
