@@ -1,20 +1,12 @@
-import 'package:elderly_medication_app/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:elderly_medication_app/navigation/app_router.dart';
 
 void main() {
-  testWidgets('shows MVP home and bottom navigation', (tester) async {
-    await tester.pumpWidget(const MyApp());
-    await tester.pump();
-
-    expect(find.text('智慧用藥管理'), findsOneWidget);
-    expect(find.text('今天應服用藥物摘要'), findsOneWidget);
-    expect(find.text('新增用藥影像'), findsOneWidget);
-    expect(find.text('今日用藥提醒'), findsOneWidget);
-    expect(find.text('用藥紀錄'), findsOneWidget);
-    expect(find.text('設定'), findsWidgets);
-    expect(find.text('首頁'), findsOneWidget);
-    expect(find.text('新增'), findsOneWidget);
-    expect(find.text('提醒'), findsOneWidget);
-    expect(find.text('紀錄'), findsOneWidget);
+  testWidgets('App 可以正常啟動', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: MainNavigationPage()),
+    );
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
   });
 }

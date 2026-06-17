@@ -1,3 +1,6 @@
+// 執行方式：
+// flutter run --dart-define=GEMINI_API_KEY=你的真實Key
+
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -7,7 +10,10 @@ import '../../models/medicine_model.dart';
 
 // [邱靖喻] Gemini AI 解析服務，禁止其他組員修改
 class GeminiService {
-  static const String _apiKey = 'YOUR_GEMINI_API_KEY';
+  static const String _apiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: '',
+  );
   // TODO [邱靖喻]：flutter run 前填入真實 API Key
 
   static const String _endpoint =

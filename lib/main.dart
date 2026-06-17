@@ -5,6 +5,7 @@ import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // TODO: 需要從 Firebase Console 下載 android/app/google-services.json。
   runApp(const MyApp());
 }
 
