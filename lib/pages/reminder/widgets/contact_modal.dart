@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class ContactModal extends StatefulWidget {
-  const ContactModal({super.key});
+  final Function(String) onSave; // 👈 問題 2：補上這個參數
+
+  const ContactModal({
+    super.key,
+    required this.onSave, // 👈 補上建構子
+  });
 
   @override
   State<ContactModal> createState() => _ContactModalState();
@@ -71,7 +76,10 @@ class _ContactModalState extends State<ContactModal> {
             onPressed: _isSaving ? null : () async {
               if (!_formKey.currentState!.validate()) return;
               setState(() => _isSaving = true);
-              await Future.delayed(const Duration(milliseconds: 500));
+              
+              widget.onSave(_textController.text.trim()); // 👈 觸發呼叫問題 2 的 onSave
+              
+              await Future.delayed(const Duration(milliseconds: 300));
               if (mounted) Navigator.of(context).pop(_textController.text.trim());
             },
             child: const Text('確定綁定', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
