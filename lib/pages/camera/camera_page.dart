@@ -388,29 +388,132 @@ class _ScanFramePainter extends CustomPainter {
   bool shouldRepaint(covariant _ScanFramePainter oldDelegate) => false;
 }
 
-// TODO [組員A]：替換為真正的 MedicineDetailPage
-class MedicinePlaceholderPage extends StatelessWidget {
+// TODO [組員A]：此暫時頁面將由 MedicineDetailPage 取代
+class MedicinePlaceholderPage extends StatefulWidget {
   final MedicineModel medicine;
 
   const MedicinePlaceholderPage({super.key, required this.medicine});
 
   @override
+  State<MedicinePlaceholderPage> createState() =>
+      _MedicinePlaceholderPageState();
+}
+
+class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
+  bool _isTtsEnabled = false;
+
+  MedicineModel get medicine => widget.medicine;
+
+  void _recordDose() {
+    // TODO [組員A]：之後串接 DoseLog 儲存
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('✅ 已記錄服藥！')),
+    );
+  }
+
+  void _toggleTts() {
+    // TODO [組員B]：之後串接 TtsService
+    setState(() => _isTtsEnabled = !_isTtsEnabled);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('辨識結果')),
-      body: ListView(
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          '辨識結果',
+          style: TextStyle(color: Colors.white, fontSize: 20),
+        ),
+      ),
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        children: [
-          _MedicineField(label: '藥品名稱', value: medicine.name),
-          const SizedBox(height: 12),
-          _MedicineField(label: '藥物類型', value: medicine.type),
-          const SizedBox(height: 12),
-          _MedicineField(label: '用法用量', value: medicine.dosage),
-          const SizedBox(height: 12),
-          _MedicineField(label: '使用頻率', value: medicine.frequency),
-          const SizedBox(height: 12),
-          _MedicineField(label: '注意事項', value: medicine.notice),
-        ],
+        child: Column(
+          children: [
+            _MedicineField(
+              label: '藥品名稱',
+              value: medicine.name,
+              contentFontSize: 18,
+            ),
+            if (medicine.indication.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _MedicineField(
+                label: '適應症（治療什麼）',
+                value: medicine.indication,
+              ),
+            ],
+            const SizedBox(height: 12),
+            _MedicineField(label: '藥物類型', value: medicine.type),
+            const SizedBox(height: 12),
+            _MedicineField(label: '用法用量', value: medicine.dosage),
+            const SizedBox(height: 12),
+            _MedicineField(label: '使用頻率', value: medicine.frequency),
+            if (medicine.timing.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _MedicineField(
+                label: '服用時間',
+                value: medicine.timing.join('、'),
+              ),
+            ],
+            if (medicine.notice.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _MedicineField(label: '注意事項', value: medicine.notice),
+            ],
+            if (medicine.endDate.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _MedicineField(label: '預計用完日期', value: medicine.endDate),
+            ],
+          ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(16),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _recordDose,
+                    icon: const Icon(Icons.check_circle),
+                    label: const Text('打卡（已服藥）'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: ElevatedButton.icon(
+                    onPressed: _toggleTts,
+                    icon: Icon(
+                      _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
+                    ),
+                    label: Text(_isTtsEnabled ? '播報開啟' : '播報關閉'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.primary),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -419,8 +522,13 @@ class MedicinePlaceholderPage extends StatelessWidget {
 class _MedicineField extends StatelessWidget {
   final String label;
   final String value;
+  final double contentFontSize;
 
-  const _MedicineField({required this.label, required this.value});
+  const _MedicineField({
+    required this.label,
+    required this.value,
+    this.contentFontSize = 16,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -432,16 +540,16 @@ class _MedicineField extends StatelessWidget {
             label,
             style: const TextStyle(
               color: AppTheme.primary,
-              fontSize: AppTheme.sectionFontSize,
-              fontWeight: FontWeight.w600,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             value.isEmpty ? '尚未辨識' : value,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppTheme.textDark,
-              fontSize: AppTheme.bodyFontSize,
+              fontSize: contentFontSize,
             ),
           ),
         ],
