@@ -37,6 +37,7 @@ JSON 欄位：
 - frequency：服用頻率（如：每日三次）
 - timing：服用時間 array（如：["早餐後","午餐後","晚餐後"]）
 - notice：注意事項或禁忌
+- indication：適應症（此藥品用於治療什麼症狀，用白話文說明，如：感冒、發燒、高血壓、胃痛、補充鈣質等，若無法判斷填空字串）
 - startDate：開始日期（無法判斷填空字串）
 - endDate：預計用完日期（無法判斷填空字串）
 
@@ -82,6 +83,7 @@ $ocrText
       frequency: map['frequency'] ?? '',
       timing: List<String>.from(map['timing'] ?? []),
       notice: map['notice'] ?? '',
+      indication: map['indication'] ?? '',
       startDate: map['startDate'] ?? '',
       endDate: map['endDate'] ?? '',
       imagePath: '',

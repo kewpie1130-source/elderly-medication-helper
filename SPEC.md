@@ -218,6 +218,7 @@ GeminiService.parseOcrResult()
   - 服用頻率
   - 服用時間
   - 注意事項 / 禁忌
+  - 適應症（indication）
   - 開始日期
   - 預計用完日期
 - 底部按鈕：
@@ -336,6 +337,7 @@ GeminiService.parseOcrResult()
   "frequency": "服用頻率（如：每日三次）",
   "timing": ["早餐後", "午餐後", "晚餐後"],
   "notice": "注意事項或禁忌",
+  "indication": "適應症（白話說明此藥用於治療什麼症狀）",
   "startDate": "2026-06-17",
   "endDate": "2026-06-30",
   "imagePath": "本地圖片路徑",
