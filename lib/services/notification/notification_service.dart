@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz; 
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart'; // 👈 🔥 終極關鍵修正：引入原生時區獲取工具
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -10,11 +12,19 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
-  /// 初始化本地定時通知服務
+  /// 初始化本地定時通知服務 (100% 符合官方架構，絕無時差未爆彈)
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
+      // 1. 載入全球時區資料庫，防止 tz.local 造成實機閃退
+      tz.initializeTimeZones();
+      
+      // 🔥 2. 核心修正：實打實獲取長者手機當前的「系統本地時區」（例如：Asia/Taipei）
+      // 這能保證 tz.local 抓到的時間和長者手錶上的時間 100% 一致，不會產生 8 小時時差！
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      
       const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
       const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
@@ -37,10 +47,10 @@ class NotificationService {
 
       _isInitialized = true;
       
-      // 主動向長者請求 Android 13+ 的通知權限，防止被系統自動封鎖
+      // 主動向長者請求 Android 13+ 的通知權限
       await requestPermissions();
       
-      debugPrint("本地通知服務基礎初始化成功 (v18.0.0)");
+      debugPrint("本地通知服務基礎初始化成功 (v18.0.0 + 台灣/本地時區已精準對齊)");
     } catch (e) {
       debugPrint("本地通知服務初始化失敗: $e");
     }
@@ -56,15 +66,14 @@ class NotificationService {
     }
   }
 
-  /// 🎯 完美版：位置參數設計，100% 兼容你舊有的 reminder_page.dart 呼叫方式
-  /// 同時保留對齊官方設計圖畫面 6 的重複頻率功能
+  /// 完美位置參數排程方法，100% 兼容呼叫端
   Future<void> zonedSchedule(
     int id,
     String title,
     String body,
     tz.TZDateTime scheduledDate, {
-    bool isDaily = false,   // 👈 放在最後面當選填具名參數，預設不重複
-    bool isWeekly = false,  // 👈 放在最後面當選填具名參數，預設不重複
+    bool isDaily = false,   
+    bool isWeekly = false,  
   }) async {
     if (!_isInitialized) {
       await initialize();
@@ -84,12 +93,12 @@ class NotificationService {
       iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
     );
 
-    // 根據畫面 6 的選擇，計算重複週期組件
+    // 根據畫面 6 的重複頻率選擇，計算重複週期組件
     DateTimeComponents? matchComponents;
     if (isDaily) {
-      matchComponents = DateTimeComponents.time; // 每天的這個時間都會響
+      matchComponents = DateTimeComponents.time; 
     } else if (isWeekly) {
-      matchComponents = DateTimeComponents.dayOfWeekAndTime; // 每週的這一天這一時間響
+      matchComponents = DateTimeComponents.dayOfWeekAndTime; 
     }
 
     try {
