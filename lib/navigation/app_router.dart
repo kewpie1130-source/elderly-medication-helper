@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../pages/camera/camera_page.dart';
+import '../pages/gallery/gallery_page.dart';
+import '../pages/settings/settings_page.dart';
 import '../theme/app_theme.dart';
 
 // [邱靖喻] 全組統一導覽結構
@@ -20,8 +22,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     CameraPage(),
     _PlaceholderPage(label: '紀錄頁', assignee: '組員A'),
     _PlaceholderPage(label: '提醒頁', assignee: '組員B'),
-    _PlaceholderPage(label: '相簿頁', assignee: '組員C'),
-    _PlaceholderPage(label: '設定頁', assignee: '組員C'),
+    GalleryPage(),
+    SettingsPage(),
   ];
 
   @override
