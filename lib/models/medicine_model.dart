@@ -10,6 +10,8 @@ class MedicineModel {
   final String frequency;
   final List<String> timing;
   final String notice;
+  final String indication;
+  // 適應症：這個藥用於治療什麼症狀
   final String startDate;
   final String endDate;
   final String imagePath;
@@ -23,6 +25,7 @@ class MedicineModel {
     required this.frequency,
     required this.timing,
     required this.notice,
+    required this.indication,
     required this.startDate,
     required this.endDate,
     required this.imagePath,
@@ -38,6 +41,7 @@ class MedicineModel {
       frequency: json['frequency'] as String? ?? '',
       timing: _parseTiming(json['timing']),
       notice: json['notice'] as String? ?? '',
+      indication: json['indication'] as String? ?? '',
       startDate: json['startDate'] as String? ?? '',
       endDate: json['endDate'] as String? ?? '',
       imagePath: json['imagePath'] as String? ?? '',
@@ -54,6 +58,7 @@ class MedicineModel {
       'frequency': frequency,
       'timing': timing,
       'notice': notice,
+      'indication': indication,
       'startDate': startDate,
       'endDate': endDate,
       'imagePath': imagePath,
@@ -70,6 +75,7 @@ class MedicineModel {
       frequency: map['frequency'] as String? ?? '',
       timing: _parseTiming(map['timing']),
       notice: map['notice'] as String? ?? '',
+      indication: map['indication'] as String? ?? '',
       startDate: map['startDate'] as String? ?? '',
       endDate: map['endDate'] as String? ?? '',
       imagePath: map['imagePath'] as String? ?? '',
@@ -86,6 +92,7 @@ class MedicineModel {
       'frequency': frequency,
       'timing': jsonEncode(timing),
       'notice': notice,
+      'indication': indication,
       'startDate': startDate,
       'endDate': endDate,
       'imagePath': imagePath,
@@ -101,6 +108,7 @@ class MedicineModel {
     String? frequency,
     List<String>? timing,
     String? notice,
+    String? indication,
     String? startDate,
     String? endDate,
     String? imagePath,
@@ -114,6 +122,7 @@ class MedicineModel {
       frequency: frequency ?? this.frequency,
       timing: timing ?? this.timing,
       notice: notice ?? this.notice,
+      indication: indication ?? this.indication,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       imagePath: imagePath ?? this.imagePath,
