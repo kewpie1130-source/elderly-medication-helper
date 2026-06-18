@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz; 
 import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_timezone/flutter_timezone.dart'; // 👈 🔥 終極關鍵修正：引入原生時區獲取工具
 
 class NotificationService {
-  // 單例模式 (Singleton)，確保全 App 只有一個通知實體在管理定時排程
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -11,15 +12,21 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
-  /// 初始化本地定時通知服務 (完全符合 v18.0.0 規範)
+  /// 初始化本地定時通知服務 (100% 符合官方架構，絕無時差未爆彈)
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // 1. Android 初始化設定：使用專案預設的 App 圖標
+      // 1. 載入全球時區資料庫，防止 tz.local 造成實機閃退
+      tz.initializeTimeZones();
+      
+      // 🔥 2. 核心修正：實打實獲取長者手機當前的「系統本地時區」（例如：Asia/Taipei）
+      // 這能保證 tz.local 抓到的時間和長者手錶上的時間 100% 一致，不會產生 8 小時時差！
+      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      
       const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      // 2. iOS / macOS (Darwin) 初始化設定
       const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -31,38 +38,47 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      // 3. 核心初始化 (v18.0.0 規定：停用舊版 onSelectNotification，全面改用 onDidReceiveNotificationResponse)
       await _notificationsPlugin.initialize(
         initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint("長者點擊了本地服藥通知，Payload: ${response.payload}");
-          // 這裡未來可以聯動跳轉到特定的 UI 頁面
         },
       );
 
       _isInitialized = true;
-      debugPrint("本地通知服務基礎初始化成功 (v18.0.0)");
+      
+      // 主動向長者請求 Android 13+ 的通知權限
+      await requestPermissions();
+      
+      debugPrint("本地通知服務基礎初始化成功 (v18.0.0 + 台灣/本地時區已精準對齊)");
     } catch (e) {
       debugPrint("本地通知服務初始化失敗: $e");
     }
   }
 
-  /// 長者定時用藥提醒排程方法 (核心修正：完全符合 v18.0.0 參數異動)
-  /// [id] 通知的唯一識別碼（不可重複，否則會覆蓋舊通知）
-  /// [title] 通知大標題（例如：阿公，吃藥時間到囉！）
-  /// [body] 通知內容細節（例如：請服用：降血壓藥 1 顆）
-  /// [scheduledDate] 預計要發出通知的精準時間點 (Timezone 本地時間)
+  /// 請求權限（針對 Android 13+ 與 iOS）
+  Future<void> requestPermissions() async {
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      await androidImplementation?.requestNotificationsPermission();
+    }
+  }
+
+  /// 完美位置參數排程方法，100% 兼容呼叫端
   Future<void> zonedSchedule(
     int id,
     String title,
     String body,
-    tz.TZDateTime scheduledDate,
-  ) async {
+    tz.TZDateTime scheduledDate, {
+    bool isDaily = false,   
+    bool isWeekly = false,  
+  }) async {
     if (!_isInitialized) {
       await initialize();
     }
 
-    // 設定 Android 通知的渠道與重要性 (長者專用：最高音量與彈出提示)
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'elderly_medication_channel_id',
       '長者服藥提醒渠道',
@@ -77,6 +93,14 @@ class NotificationService {
       iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true),
     );
 
+    // 根據畫面 6 的重複頻率選擇，計算重複週期組件
+    DateTimeComponents? matchComponents;
+    if (isDaily) {
+      matchComponents = DateTimeComponents.time; 
+    } else if (isWeekly) {
+      matchComponents = DateTimeComponents.dayOfWeekAndTime; 
+    }
+
     try {
       await _notificationsPlugin.zonedSchedule(
         id,
@@ -85,18 +109,16 @@ class NotificationService {
         scheduledDate,
         notificationDetails,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-        
-        // ❌ androidAllowWhileIdle: true,  <-- 這一行在 v18.0.0 已經被官方刪除，留著編譯必報錯！
-        // ✅ 修正：改用 v18.0.0 強制要求的全新必填列舉參數
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle, 
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: matchComponents, 
       );
-      debugPrint("成功排定用藥通知！ID: $id, 時間: $scheduledDate");
+      debugPrint("成功排定用藥通知！ID: $id, 重複模式: ${matchComponents ?? '單次'}, 時間: $scheduledDate");
     } catch (e) {
       debugPrint("定時排程通知失敗: $e");
     }
   }
 
-  /// 取消特定的通知排程 (防呆用，長者按了「我已吃藥」，就把今天後續的重複提醒關掉)
+  /// 取消特定的通知排程
   Future<void> cancel(int id) async {
     try {
       await _notificationsPlugin.cancel(id);
