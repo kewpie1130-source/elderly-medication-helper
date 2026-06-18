@@ -32,16 +32,16 @@ class _SettingsPageState extends State<SettingsPage> {
               leading: const CircleAvatar(radius: 30, backgroundColor: Color(0xFF4CAF50), child: Icon(Icons.person, size: 30, color: Colors.white)),
               title: const Text("使用者名稱", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               subtitle: const Text("點擊編輯個人資料"),
-              onTap: () => print("導航至個人資料編輯"),
+              onTap: () => _handleNavigation("個人資料編輯"),
             ),
           ),
           const SizedBox(height: 24),
-          _buildSettingsTile(Icons.login, "登出", () => print("執行登出")),
-          _buildSettingsTile(Icons.contacts, "聯絡人設定", () => print("聯絡人設定")),
-          _buildSettingsTile(Icons.notifications_active, "通知偏好設定", () => print("通知設定")),
-          _buildSettingsTile(Icons.text_fields, "調整字體大小", () => print("調整字體")),
+          _buildSettingsTile(Icons.login, "登出", () => _handleAction("登出系統")),
+          _buildSettingsTile(Icons.contacts, "聯絡人設定", () => _handleNavigation("聯絡人設定")),
+          _buildSettingsTile(Icons.notifications_active, "通知偏好設定", () => _handleNavigation("通知設定")),
+          _buildSettingsTile(Icons.text_fields, "調整字體大小", () => _handleAction("調整字體")),
           _buildSettingsTile(Icons.language, "語言設定: \", _showLanguageDialog),
-          _buildSettingsTile(Icons.info_outline, "關於與隱私權", () => print("關於頁")),
+          _buildSettingsTile(Icons.info_outline, "關於與隱私權", () => _handleNavigation("關於頁")),
         ],
       ),
     );
@@ -59,6 +59,14 @@ class _SettingsPageState extends State<SettingsPage> {
         onTap: onTap,
       ),
     );
+  }
+
+  void _handleNavigation(String pageName) {
+    print("導航至: \");
+  }
+
+  void _handleAction(String actionName) {
+    print("執行動作: \");
   }
 
   void _showLanguageDialog() {

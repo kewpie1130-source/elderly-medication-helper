@@ -1,6 +1,7 @@
 ﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../services/analytics/analytics_service.dart';
 
 class GalleryPage extends StatefulWidget {
   const GalleryPage({super.key});
@@ -11,6 +12,7 @@ class GalleryPage extends StatefulWidget {
 
 class _GalleryPageState extends State<GalleryPage> {
   final ImagePicker _picker = ImagePicker();
+  final AnalyticsService _analytics = AnalyticsService();
   List<File> _capturedImages = [];
 
   Future<void> _pickImage(ImageSource source) async {
@@ -19,7 +21,17 @@ class _GalleryPageState extends State<GalleryPage> {
       setState(() {
         _capturedImages.add(File(pickedFile.path));
       });
-      print('已選取照片: \');
+      
+      // 觸發匿名資料統計上傳
+      await _analytics.logAnalytics(
+        ageGroup: "65-74",
+        gender: "other",
+        medicineType: "保健食品",
+        taken: true,
+        hour: DateTime.now().hour.toString().padLeft(2, '0'),
+      );
+      
+      print('已選取照片並上傳統計: \');
     }
   }
 
