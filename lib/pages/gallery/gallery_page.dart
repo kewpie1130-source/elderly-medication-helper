@@ -22,7 +22,7 @@ class _GalleryPageState extends State<GalleryPage> {
         _capturedImages.add(File(pickedFile.path));
       });
       
-      // 觸發匿名資料統計上傳
+      // 觸發匿名資料統計上傳 (符合規格書匿名數據需求)
       await _analytics.logAnalytics(
         ageGroup: "65-74",
         gender: "other",
@@ -45,7 +45,10 @@ class _GalleryPageState extends State<GalleryPage> {
           backgroundColor: const Color(0xFF4CAF50),
           bottom: const TabBar(
             indicatorColor: Colors.white,
-            tabs: [Tab(text: "手機相簿"), Tab(text: "拍攝紀錄")],
+            tabs: [
+              Tab(text: "手機相簿"),
+              Tab(text: "拍攝紀錄"),
+            ],
           ),
         ),
         body: TabBarView(
@@ -64,12 +67,12 @@ class _GalleryPageState extends State<GalleryPage> {
   }
 
   Widget _buildGalleryView() {
-    return const Center(child: Text("點擊右下角相機按鈕開始拍攝藥物"));
+    return const Center(child: Text("點擊右下角相機按鈕開始拍攝藥物", style: TextStyle(fontSize: 18)));
   }
 
   Widget _buildRecordView() {
     if (_capturedImages.isEmpty) {
-      return const Center(child: Text("目前尚無拍攝紀錄"));
+      return const Center(child: Text("目前尚無拍攝紀錄", style: TextStyle(fontSize: 18)));
     }
     return GridView.builder(
       padding: const EdgeInsets.all(8),

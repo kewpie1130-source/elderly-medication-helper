@@ -1,4 +1,4 @@
-﻿import '../firebase/firebase_service.dart';
+﻿import '../../firebase/firebase_service.dart';
 
 class AnalyticsService {
   final FirebaseService _firebaseService = FirebaseService();
