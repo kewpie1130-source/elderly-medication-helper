@@ -22,16 +22,16 @@ class _GalleryPageState extends State<GalleryPage> {
         _capturedImages.add(File(pickedFile.path));
       });
       
-      // 觸發匿名資料統計上傳 (符合規格書匿名數據需求)
+      // 整合 Analytics：拍照後記錄匿名數據
       await _analytics.logAnalytics(
-        ageGroup: "65-74",
+        ageGroup: "65-74", // 預設值，可後續調整
         gender: "other",
-        medicineType: "保健食品",
+        medicineType: "保健食品", // 實際應用應由辨識結果傳入
         taken: true,
         hour: DateTime.now().hour.toString().padLeft(2, '0'),
       );
       
-      print('已選取照片並上傳統計: \');
+      print('已成功紀錄匿名數據至 Firestore');
     }
   }
 
@@ -66,27 +66,20 @@ class _GalleryPageState extends State<GalleryPage> {
     );
   }
 
-  Widget _buildGalleryView() {
-    return const Center(child: Text("點擊右下角相機按鈕開始拍攝藥物", style: TextStyle(fontSize: 18)));
-  }
+  Widget _buildGalleryView() => const Center(child: Text("點擊相機按鈕", style: TextStyle(fontSize: 18)));
 
   Widget _buildRecordView() {
-    if (_capturedImages.isEmpty) {
-      return const Center(child: Text("目前尚無拍攝紀錄", style: TextStyle(fontSize: 18)));
-    }
     return GridView.builder(
       padding: const EdgeInsets.all(8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
       itemCount: _capturedImages.length,
-      itemBuilder: (context, index) {
-        return Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Image.file(_capturedImages[index], fit: BoxFit.cover),
-          ),
-        );
-      },
+      itemBuilder: (context, index) => Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.file(_capturedImages[index], fit: BoxFit.cover),
+        ),
+      ),
     );
   }
 }
