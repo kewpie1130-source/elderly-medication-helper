@@ -220,35 +220,12 @@ class _CameraPageState extends State<CameraPage> {
 
           // 中央掃描框
           Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 280,
-                  height: 200,
-                  child: CustomPaint(
-                    painter: const _ScanFramePainter(),
-                    child: const Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          '請對準\n藥袋 / 藥盒 /\n保健食品外包裝',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            height: 1.6,
-                            shadows: [
-                              Shadow(color: Colors.black, blurRadius: 6),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            child: SizedBox(
+              width: 280,
+              height: 200,
+              child: CustomPaint(
+                painter: const _ScanFramePainter(),
+              ),
             ),
           ),
 
@@ -478,13 +455,6 @@ class _ScanFramePainter extends CustomPainter {
       Offset(0, size.height - _cornerLength),
       paint,
     );
-
-    // 半透明框線
-    final framePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.3)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), framePaint);
   }
 
   @override
