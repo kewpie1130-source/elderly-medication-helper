@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:elderly_medication_helper/models/medicine_model.dart';
-import 'package:elderly_medication_helper/models/dose_log_model.dart';
-import 'package:elderly_medication_helper/repositories/medicine_repository.dart';
-import 'package:elderly_medication_helper/theme/app_theme.dart';
 import 'package:uuid/uuid.dart';
+
+import '../../models/dose_log_model.dart';
+import '../../models/medicine_model.dart';
+import '../../repositories/medicine_repository.dart';
+import '../../theme/app_theme.dart';
 
 class MedicineDetailPage extends StatefulWidget {
   final MedicineModel medicine;
 
-  const MedicineDetailPage({Key? key, required this.medicine}) : super(key: key);
+  const MedicineDetailPage({super.key, required this.medicine});
 
   @override
   State<MedicineDetailPage> createState() => _MedicineDetailPageState();
@@ -36,7 +37,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('👍 打卡成功！您已經吃過藥囉！', style: TextStyle(fontSize: 18)),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primary,
         duration: Duration(seconds: 2),
       ),
     );
@@ -47,10 +48,10 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     final med = widget.medicine;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('藥品資訊內容頁', style: TextStyle(fontSize: 22, fontWeight: 'bold')),
-        backgroundColor: AppTheme.primaryColor,
+        title: const Text('藥品資訊內容頁', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        backgroundColor: AppTheme.primary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
@@ -74,12 +75,12 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                       padding: const EdgeInsets.all(20.0),
                       child: Column(
                         children: [
-                          const Icon(Icons.medication, size: 70, color: AppTheme.primaryColor),
+                          const Icon(Icons.medication, size: 70, color: AppTheme.primary),
                           const SizedBox(height: 12),
                           Text(
                             med.name,
-                            style: const TextStyle(fontSize: 26, fontWeight: 'bold', color: AppTheme.textColor),
-                            textAlign: Center,
+                            style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -112,7 +113,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: AppTheme.primary,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         elevation: 1,
                       ),
@@ -124,8 +125,8 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                           SizedBox(width: 8),
                           Text(
                             '打卡\n(已服藥)', 
-                            style: TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.1),
-                            textAlign: Center,
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -138,7 +139,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _isTtsEnabled ? AppTheme.primaryColor : Colors.grey.shade600,
+                        backgroundColor: _isTtsEnabled ? AppTheme.primary : Colors.grey.shade600,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                         elevation: 1,
                       ),
@@ -154,8 +155,8 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                           const SizedBox(width: 8),
                           Text(
                             _isTtsEnabled ? '播報\n(語音開啟)' : '播報\n(語音關閉)',
-                            style: const TextStyle(fontSize: 18, fontWeight: 'bold', color: Colors.white, height: 1.1),
-                            textAlign: Center,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, height: 1.1),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -181,15 +182,15 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 26, color: isWarning ? Colors.red.shade400 : AppTheme.primaryColor),
+          Icon(icon, size: 26, color: isWarning ? Colors.red.shade400 : AppTheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: 'w500')),
+                Text(title, style: const TextStyle(fontSize: 15, color: Colors.grey, fontWeight: FontWeight.w500)),
                 const SizedBox(height: 2),
-                Text(content, style: TextStyle(fontSize: 18, color: isWarning ? Colors.red : AppTheme.textColor, fontWeight: 'bold')),
+                Text(content, style: TextStyle(fontSize: 18, color: isWarning ? Colors.red : AppTheme.textDark, fontWeight: FontWeight.bold)),
               ],
             ),
           ),

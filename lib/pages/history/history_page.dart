@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:elderly_medication_helper/models/medicine_model.dart';
-import 'package:elderly_medication_helper/repositories/medicine_repository.dart';
-import 'package:elderly_medication_helper/theme/app_theme.dart';
-import 'package:elderly_medication_helper/pages/medicine/medicine_detail_page.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/medicine_model.dart';
+import '../../repositories/medicine_repository.dart';
+import '../../theme/app_theme.dart';
+import '../medicine/medicine_detail_page.dart';
+
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({Key? key}) : super(key: key);
+  const HistoryPage({super.key});
 
   @override
   State<HistoryPage> createState() => _HistoryPageState();
@@ -69,22 +70,22 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('用藥紀錄', style: TextStyle(fontSize: 24, fontWeight: 'bold')), // 仿照設計圖標題
+        title: const Text('用藥紀錄', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), // 仿照設計圖標題
         backgroundColor: Colors.white,
-        foregroundColor: AppTheme.textColor,
+        foregroundColor: AppTheme.textDark,
         elevation: 0.5,
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.filter_alt_outlined, color: AppTheme.primaryColor, size: 28), // 設計圖右上角綠色篩選圖示
+            icon: const Icon(Icons.filter_alt_outlined, color: AppTheme.primary, size: 28), // 設計圖右上角綠色篩選圖示
             onPressed: _loadHistoryData, 
           )
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : _todayList.isEmpty && _thisWeekList.isEmpty && _olderList.isEmpty
               ? _buildEmptyState()
               : ListView(
@@ -106,10 +107,10 @@ class _HistoryPageState extends State<HistoryPage> {
           padding: const EdgeInsets.only(top: 16, bottom: 8, left: 4),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: 'bold', color: AppTheme.textColor),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
         ),
-        ...items.map((med) => _buildHistoryCard(med)).toList(),
+        ...items.map((med) => _buildHistoryCard(med)),
       ],
     );
   }
@@ -131,7 +132,7 @@ class _HistoryPageState extends State<HistoryPage> {
       color: Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(15),
-        onPressed: () {
+        onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -146,8 +147,8 @@ class _HistoryPageState extends State<HistoryPage> {
               // 左側日期文字
               Text(
                 scanDate,
-                textAlign: Center,
-                style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: 'w500'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
               ),
               const SizedBox(width: 16),
               
@@ -155,10 +156,10 @@ class _HistoryPageState extends State<HistoryPage> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  color: AppTheme.primary.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.calendar_today, size: 24, color: AppTheme.primaryColor),
+                child: const Icon(Icons.calendar_today, size: 24, color: AppTheme.primary),
               ),
               const SizedBox(width: 16),
               
@@ -169,7 +170,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   children: [
                     Text(
                       med.name,
-                      style: const TextStyle(fontSize: 18, fontWeight: 'bold', color: AppTheme.textColor),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -181,7 +182,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
               
               // 右側箭頭（綠色 `>`）
-              const Icon(Icons.arrow_forward_ios, size: 20, color: AppTheme.primaryColor),
+              const Icon(Icons.arrow_forward_ios, size: 20, color: AppTheme.primary),
             ],
           ),
         ),
@@ -198,7 +199,7 @@ class _HistoryPageState extends State<HistoryPage> {
           const SizedBox(height: 12),
           Text(
             '尚未有用藥紀錄喔！',
-            style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: 'bold'),
+            style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
           ),
         ],
       ),

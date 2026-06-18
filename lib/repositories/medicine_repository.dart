@@ -1,6 +1,6 @@
-import 'package:elderly_medication_helper/database/db_helper.dart';
-import 'package:elderly_medication_helper/models/medicine_model.dart';
-import 'package:elderly_medication_helper/models/dose_log_model.dart';
+import '../database/db_helper.dart';
+import '../models/dose_log_model.dart';
+import '../models/medicine_model.dart';
 
 class MedicineRepository {
   final DbHelper _dbHelper = DbHelper.instance;
