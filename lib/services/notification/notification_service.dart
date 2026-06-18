@@ -11,16 +11,13 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
-  /// 初始化本地定時通知服務
+  /// 初始化本地定時通知服務 (100% 對齊 v18 具名參數)
   Future<void> initialize() async {
     if (_isInitialized) return;
 
     try {
-      // 1. 載入全球時區資料庫
       tz.initializeTimeZones();
-      
-      // ✅ 修正：免用額外套件！直接使用專案現有 timezone 的 UTC 轉換或預設在地化，確保編譯絕對大綠燈
-      tz.setLocalLocation(tz.getLocation('Asia/Taipei')); // 專案既然是長者用藥，強制鎖定台灣台北時區最安全！
+      tz.setLocalLocation(tz.getLocation('Asia/Taipei')); // 鎖定台灣台北時區
       
       const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
       const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
@@ -34,8 +31,9 @@ class NotificationService {
         iOS: iosSettings,
       );
 
+      // ✅ 修正 1：對齊 v18 規格，加上必填具名標籤 settings:
       await _notificationsPlugin.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint("長者點擊了本地服藥通知，Payload: ${response.payload}");
         },
@@ -58,6 +56,7 @@ class NotificationService {
     }
   }
 
+  /// 🎯 對外依舊維持「位置參數」設計，100% 完美相容你的 reminder_page.dart 呼叫端
   Future<void> zonedSchedule(
     int id,
     String title,
@@ -88,21 +87,40 @@ class NotificationService {
     if (isWeekly) matchComponents = DateTimeComponents.dayOfWeekAndTime; 
 
     try {
+      // ✅ 修正 2：底層方法全面改寫為 v18 強制要求的「具名參數」，並徹底移除已廢棄的 uiLocalNotificationDateInterpretation
       await _notificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDate,
-        notificationDetails,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: matchComponents, 
       );
+      debugPrint("成功排定用藥通知！ID: $id, 時間: $scheduledDate");
     } catch (e) {
       debugPrint("定時排程通知失敗: $e");
     }
   }
 
-  Future<void> cancel(int id) async => await _notificationsPlugin.cancel(id);
-  Future<void> cancelAll() async => await _notificationsPlugin.cancelAll();
+  /// 取消特定的通知排程
+  Future<void> cancel(int id) async {
+    try {
+      // ✅ 修正 3：對齊 v18 規格，cancel 內部也必須使用具名參數 id:
+      await _notificationsPlugin.cancel(id: id);
+      debugPrint("已成功取消 ID: $id 的通知排程");
+    } catch (e) {
+      debugPrint("取消通知排程失敗: $e");
+    }
+  }
+
+  /// 一鍵取消全 App 所有通知排程
+  Future<void> cancelAll() async {
+    try {
+      await _notificationsPlugin.cancelAll();
+      debugPrint("已成功取消全 App 所有本地通知排程");
+    } catch (e) {
+      debugPrint("取消所有通知排程失敗: $e");
+    }
+  }
 }
