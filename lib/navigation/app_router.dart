@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../pages/camera/camera_page.dart';
 import '../pages/gallery/gallery_page.dart';
+import '../pages/history/history_page.dart';
 import '../pages/reminder/reminder_page.dart';
 import '../pages/settings/settings_page.dart';
 import '../theme/app_theme.dart';
@@ -21,7 +22,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   static const List<Widget> _pages = [
     CameraPage(),
-    _PlaceholderPage(label: '紀錄頁', assignee: '組員A'),
+    HistoryPage(),
     ReminderPage(),
     GalleryPage(),
     SettingsPage(),
