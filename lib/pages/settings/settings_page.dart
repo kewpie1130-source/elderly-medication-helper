@@ -15,6 +15,9 @@ class SettingsPage extends StatelessWidget {
         children: [
           _buildProfileHeader(),
           const SizedBox(height: 20),
+          _buildSettingsItem(Icons.login, "登入", () {
+            // TODO: 接上正式登入流程。
+          }),
           _buildSettingsItem(Icons.person, "使用者資訊編輯", () {}),
           _buildSettingsItem(Icons.contacts, "聯絡人設定", () {}),
           _buildSettingsItem(Icons.language, "語言設定", () {}),

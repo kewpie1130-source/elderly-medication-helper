@@ -72,16 +72,30 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('用藥紀錄', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)), // 仿照設計圖標題
-        backgroundColor: Colors.white,
+        title: const Text(
+          '用藥紀錄',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textDark,
+          ),
+        ),
+        backgroundColor: AppTheme.background,
         foregroundColor: AppTheme.textDark,
-        elevation: 0.5,
+        elevation: 0,
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.filter_alt_outlined, color: AppTheme.primary, size: 28), // 設計圖右上角綠色篩選圖示
-            onPressed: _loadHistoryData, 
-          )
+          Padding(
+            padding: const EdgeInsets.only(right: 14),
+            child: IconButton(
+              icon: const Icon(
+                Icons.filter_alt_outlined,
+                color: AppTheme.primary,
+                size: 24,
+              ),
+              onPressed: _loadHistoryData,
+            ),
+          ),
         ],
       ),
       body: _isLoading
@@ -89,9 +103,9 @@ class _HistoryPageState extends State<HistoryPage> {
           : _todayList.isEmpty && _thisWeekList.isEmpty && _olderList.isEmpty
               ? _buildEmptyState()
               : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   children: [
-                    if (_todayList.isNotEmpty) _buildSection('今日', _todayList), // 對齊設計圖乾淨分類
+                    if (_todayList.isNotEmpty) _buildSection('今日', _todayList),
                     if (_thisWeekList.isNotEmpty) _buildSection('本週', _thisWeekList),
                     if (_olderList.isNotEmpty) _buildSection('更早', _olderList),
                   ],
@@ -104,10 +118,14 @@ class _HistoryPageState extends State<HistoryPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 16, bottom: 8, left: 4),
+          padding: const EdgeInsets.fromLTRB(2, 14, 2, 8),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.primary.withValues(alpha: 0.95),
+            ),
           ),
         ),
         ...items.map((med) => _buildHistoryCard(med)),
@@ -115,75 +133,98 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  // 仿照設計圖3的單條歷史紀錄外觀（內含時鐘圖示與右側箭頭）
   Widget _buildHistoryCard(MedicineModel med) {
     String scanTime = '09:15';
-    String scanDate = med.startDate;
     try {
       final parsed = DateTime.parse(med.createdAt);
       scanTime = DateFormat('HH:mm').format(parsed);
-      scanDate = DateFormat('yyyy/MM/dd\n(一)').format(parsed); // 模擬設計圖星期顯示
     } catch (_) {}
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MedicineDetailPage(medicine: med),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => MedicineDetailPage(medicine: med),
+              ),
+            ).then((_) => _loadHistoryData());
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.calendar_today,
+                    size: 21,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        med.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '拍攝時間：$scanTime',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '預計用完：${med.endDate}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 26,
+                  color: AppTheme.primary,
+                ),
+              ],
             ),
-          ).then((_) => _loadHistoryData());
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // 左側日期文字
-              Text(
-                scanDate,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(width: 16),
-              
-              // 中間綠色小圓行事曆圖示（跟設計圖一致）
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.calendar_today, size: 24, color: AppTheme.primary),
-              ),
-              const SizedBox(width: 16),
-              
-              // 藥品主要資訊
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      med.name,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text('拍攝時間：$scanTime', style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                    Text('預計用完：${med.endDate}', style: const TextStyle(fontSize: 14, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              
-              // 右側箭頭（綠色 `>`）
-              const Icon(Icons.arrow_forward_ios, size: 20, color: AppTheme.primary),
-            ],
           ),
         ),
       ),

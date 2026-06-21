@@ -21,6 +21,11 @@ class ReminderPage extends StatefulWidget {
 class _ReminderPageState extends State<ReminderPage> {
   final TtsService _ttsService = TtsService();
   final NotificationService _notificationService = NotificationService();
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 30);
+  int _selectedFrequencyIndex = 0;
+  bool _reminderEnabled = true;
+
+  static const List<String> _frequencyLabels = ['每天', '每週', '自訂'];
 
   @override
   void initState() {
@@ -40,41 +45,280 @@ class _ReminderPageState extends State<ReminderPage> {
     final String currentMedicine = widget.medicineName ?? "降血壓藥";
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('智慧用藥助手', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
-        backgroundColor: AppTheme.primary, 
+        title: const Text(
+          '新增提醒',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textDark,
+          ),
+        ),
+        backgroundColor: AppTheme.background,
+        foregroundColor: AppTheme.primary,
+        elevation: 0,
         centerTitle: true,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '當前處理藥物：$currentMedicine',
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark), 
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(290, 85),
-                backgroundColor: AppTheme.primary, 
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                elevation: 4,
+        actions: [
+          TextButton(
+            onPressed: () => _triggerOfficialFlow(context, currentMedicine),
+            child: const Text(
+              '儲存',
+              style: TextStyle(
+                color: AppTheme.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
-              onPressed: () => _triggerOfficialFlow(context, currentMedicine),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _buildSettingsCard(context),
+          const SizedBox(height: 18),
+          _buildCurrentReminderCard(currentMedicine),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '設定時間',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: _pickTime,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F8F8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE8E8E8)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_circle_filled, size: 28, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('觸發官方引導流程 (畫面7+8)', style: TextStyle(fontSize: 19, color: Colors.white, fontWeight: FontWeight.bold)),
+                  Text(
+                    _selectedTime.hour.toString().padLeft(2, '0'),
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(
+                      ':',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _selectedTime.minute.toString().padLeft(2, '0'),
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '重複頻率',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(_frequencyLabels.length, (index) {
+              final bool selected = _selectedFrequencyIndex == index;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: index == _frequencyLabels.length - 1 ? 0 : 8,
+                  ),
+                  child: ChoiceChip(
+                    label: Center(child: Text(_frequencyLabels[index])),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() => _selectedFrequencyIndex = index);
+                    },
+                    showCheckmark: false,
+                    selectedColor: AppTheme.primary,
+                    backgroundColor: const Color(0xFFF5F5F5),
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : AppTheme.textDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: selected ? AppTheme.primary : Colors.transparent,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
       ),
     );
+  }
+
+  Widget _buildCurrentReminderCard(String currentMedicine) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 2, bottom: 10),
+          child: Text(
+            '目前的提醒',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Column(
+                children: [
+                  Text(
+                    _formatSelectedTime(),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    color: Colors.grey.shade500,
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      currentMedicine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _frequencyLabels[_selectedFrequencyIndex],
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _reminderEnabled,
+                activeThumbColor: Colors.white,
+                activeTrackColor: AppTheme.primary,
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: Colors.grey.shade300,
+                onChanged: (value) {
+                  setState(() => _reminderEnabled = value);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null) return;
+    setState(() => _selectedTime = picked);
+  }
+
+  String _formatSelectedTime() {
+    return '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
   }
 
   void _triggerOfficialFlow(BuildContext context, String targetMedicine) {
