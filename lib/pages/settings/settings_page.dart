@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import '../../theme/app_theme.dart'; 
+﻿import 'package:flutter/material.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -7,48 +6,42 @@ class SettingsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text("設定", style: TextStyle(fontSize: AppTheme.titleFontSize, fontWeight: FontWeight.bold)),
-        backgroundColor: AppTheme.primary,
+        title: const Text("設定", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF4CAF50),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         children: [
-          // 使用者資訊卡片
-          Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.borderRadius)),
-            elevation: AppTheme.cardElevation,
-            child: const ListTile(
-              leading: CircleAvatar(
-                radius: 30,
-                backgroundColor: AppTheme.primary,
-                child: Icon(Icons.person, size: 40, color: Colors.white),
-              ),
-              title: Text("使用者名稱", style: TextStyle(fontSize: AppTheme.sectionFontSize, fontWeight: FontWeight.bold)),
-              subtitle: Text("點擊編輯個人資料", style: TextStyle(fontSize: AppTheme.bodyFontSize)),
-            ),
-          ),
+          _buildProfileHeader(),
           const SizedBox(height: 20),
-          
-          // 設定清單
-          _buildSettingsTile(Icons.notifications, "聯絡人設定", () {}),
-          _buildSettingsTile(Icons.language, "語言設定", () {}),
-          _buildSettingsTile(Icons.logout, "登出", () {}),
+          _buildSettingsItem(Icons.person, "使用者資訊編輯", () {}),
+          _buildSettingsItem(Icons.contacts, "聯絡人設定", () {}),
+          _buildSettingsItem(Icons.language, "語言設定", () {}),
+          _buildSettingsItem(Icons.logout, "登出", () {}),
         ],
       ),
     );
   }
 
-  Widget _buildSettingsTile(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildProfileHeader() {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.borderRadius)),
-      elevation: AppTheme.cardElevation,
-      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: const ListTile(
+        leading: CircleAvatar(backgroundColor: Color(0xFF4CAF50), child: Icon(Icons.person, color: Colors.white)),
+        title: Text("使用者名稱", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        subtitle: Text("編輯個人檔案"),
+      ),
+    );
+  }
+
+  Widget _buildSettingsItem(IconData icon, String title, VoidCallback onTap) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primary, size: 30),
-        title: Text(title, style: const TextStyle(fontSize: AppTheme.buttonFontSize)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+        leading: Icon(icon, color: const Color(0xFF4CAF50)),
+        title: Text(title, style: const TextStyle(fontSize: 16)),
+        trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
     );
