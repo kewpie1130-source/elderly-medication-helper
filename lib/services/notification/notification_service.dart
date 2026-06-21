@@ -31,9 +31,9 @@ class NotificationService {
         iOS: iosSettings,
       );
 
-      // ✅ 修正 1：對齊 v18 規格，加上必填具名標籤 settings:
+      // 對齊 v18 API：InitializationSettings 是第一個位置參數。
       await _notificationsPlugin.initialize(
-        settings: initSettings,
+        initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse response) {
           debugPrint("長者點擊了本地服藥通知，Payload: ${response.payload}");
         },
@@ -87,13 +87,15 @@ class NotificationService {
     if (isWeekly) matchComponents = DateTimeComponents.dayOfWeekAndTime; 
 
     try {
-      // ✅ 修正 2：底層方法全面改寫為 v18 強制要求的「具名參數」，並徹底移除已廢棄的 uiLocalNotificationDateInterpretation
+      // 對齊 v18 API：前五個必要參數為位置參數。
       await _notificationsPlugin.zonedSchedule(
-        id: id,
-        title: title,
-        body: body,
-        scheduledDate: scheduledDate,
-        notificationDetails: notificationDetails,
+        id,
+        title,
+        body,
+        scheduledDate,
+        notificationDetails,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: matchComponents, 
       );
@@ -106,8 +108,8 @@ class NotificationService {
   /// 取消特定的通知排程
   Future<void> cancel(int id) async {
     try {
-      // ✅ 修正 3：對齊 v18 規格，cancel 內部也必須使用具名參數 id:
-      await _notificationsPlugin.cancel(id: id);
+      // 對齊 v18 API：id 是第一個位置參數。
+      await _notificationsPlugin.cancel(id);
       debugPrint("已成功取消 ID: $id 的通知排程");
     } catch (e) {
       debugPrint("取消通知排程失敗: $e");
