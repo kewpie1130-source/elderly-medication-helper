@@ -1,66 +1,47 @@
 import 'package:flutter/material.dart';
-import 'package:elderly_medication_helper/theme/app_theme.dart';
-// 1. 引入組員 A 實作的歷史紀錄頁
-import 'package:elderly_medication_helper/pages/history/history_page.dart'; 
-// 引入其他組員負責的頁面（此處根據標準專案結構模擬，請保留原有的 import）
-import 'package:elderly_medication_helper/pages/camera/camera_page.dart';
-import 'package:elderly_medication_helper/pages/reminder/reminder_page.dart';
-import 'package:elderly_medication_helper/pages/gallery/gallery_page.dart';
-import 'package:elderly_medication_helper/pages/settings/settings_page.dart';
 
-class AppRouter extends StatefulWidget {
-  const AppRouter({Key? key}) : super(key: key);
+import '../pages/camera/camera_page.dart';
+import '../pages/gallery/gallery_page.dart';
+import '../pages/reminder/reminder_page.dart';
+import '../pages/settings/settings_page.dart';
+import '../theme/app_theme.dart';
+
+// [邱靖喻] 全組統一導覽結構
+// 禁止其他組員修改此檔案結構
+// 各組員只需將 Placeholder 替換為自己的頁面
+class MainNavigationPage extends StatefulWidget {
+  const MainNavigationPage({super.key});
 
   @override
-  State<AppRouter> createState() => _AppRouterState();
+  State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
 
-class _AppRouterState extends State<AppRouter> {
-  int _currentIndex = 1; // 預設停在紀錄頁方便你們目前進行實機測試
+class _MainNavigationPageState extends State<MainNavigationPage> {
+  int _selectedIndex = 0;
 
-  // 2. 核心修正：將各分頁對應的 Widget 串接起來
-  Widget _buildPage(int index) {
-    switch (index) {
-      case 0:
-        // 首頁 - 拍攝辨識頁（組員 B / C 守備範圍）
-        return const CameraPage(); 
-      case 1:
-        // 紀錄頁 - 歷史紀錄頁（組員 A 守備範圍，完美對齊 ui_reference.png）
-        return const HistoryPage(); 
-      case 2:
-        // 提醒頁（組員 B 守備範圍）
-        return const ReminderPage();
-      case 3:
-        // 相簿頁（組員 C 守備範圍）
-        return const GalleryPage();
-      case 4:
-        // 設定頁（共通/其餘組員守備範圍）
-        return const SettingsPage();
-      default:
-        return const HistoryPage();
-    }
-  }
+  static const List<Widget> _pages = [
+    CameraPage(),
+    _PlaceholderPage(label: '紀錄頁', assignee: '組員A'),
+    ReminderPage(),
+    GalleryPage(),
+    SettingsPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _currentIndex,
-        children: List.generate(5, (index) => _buildPage(index)),
+        index: _selectedIndex,
+        children: _pages,
       ),
-      // 底部導覽列（對齊實機畫面的 5 個 Icons 順序與名稱）
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        selectedFontSize: 14,
-        unselectedFontSize: 14,
+        currentIndex: _selectedIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          setState(() => _selectedIndex = index);
         },
+        selectedItemColor: AppTheme.primary,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.camera_alt),
@@ -83,6 +64,32 @@ class _AppRouterState extends State<AppRouter> {
             label: '設定',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PlaceholderPage extends StatelessWidget {
+  final String label;
+  final String assignee;
+
+  const _PlaceholderPage({
+    required this.label,
+    required this.assignee,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Text(
+          '$label\n由 $assignee 實作中',
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.grey,
+            fontSize: AppTheme.bodyFontSize,
+          ),
+        ),
       ),
     );
   }
