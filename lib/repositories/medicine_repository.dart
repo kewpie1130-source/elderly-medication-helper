@@ -32,6 +32,7 @@ class MedicineRepository {
           frequency: maps[i]['frequency'] ?? '',
           timing: timings,
           notice: maps[i]['notice'] ?? '',
+          indication: maps[i]['indication'] as String? ?? '',
           startDate: maps[i]['startDate'] ?? '',
           endDate: maps[i]['endDate'] ?? '',
           imagePath: maps[i]['imagePath'] ?? '',

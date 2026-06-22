@@ -38,7 +38,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('👍 打卡成功！您已經吃過藥囉！', style: TextStyle(fontSize: 18)),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primary,
         duration: Duration(seconds: 2),
       ),
     );
@@ -49,13 +49,13 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
     final med = widget.medicine;
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundColor,
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text(
           '藥品資訊內容頁',
-          style: TextStyle(fontSize: 22, fontWeight: 'bold'),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
@@ -85,15 +85,15 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                           const Icon(
                             Icons.medication,
                             size: 70,
-                            color: AppTheme.primaryColor,
+                            color: AppTheme.primary,
                           ),
                           const SizedBox(height: 12),
                           Text(
                             med.name,
                             style: const TextStyle(
                               fontSize: 26,
-                              fontWeight: 'bold',
-                              color: AppTheme.textColor,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
                             ),
                             textAlign: TextAlign
                                 .center, // 🛠️ 已修正：改為小寫開頭的 TextAlign.center
@@ -150,7 +150,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     height: 60,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
+                        backgroundColor: AppTheme.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
@@ -166,7 +166,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                             '打卡\n(已服藥)',
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: 'bold',
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                               height: 1.1,
                             ),
@@ -184,7 +184,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _isTtsEnabled
-                            ? AppTheme.primaryColor
+                            ? AppTheme.primary
                             : Colors.grey.shade600,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
@@ -209,7 +209,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                             _isTtsEnabled ? '播報\n(語音開啟)' : '播報\n(語音關閉)',
                             style: const TextStyle(
                               fontSize: 18,
-                              fontWeight: 'bold',
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
                               height: 1.1,
                             ),
@@ -247,7 +247,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
           Icon(
             icon,
             size: 26,
-            color: isWarning ? Colors.red.shade400 : AppTheme.primaryColor,
+            color: isWarning ? Colors.red.shade400 : AppTheme.primary,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -259,7 +259,7 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                   style: const TextStyle(
                     fontSize: 15,
                     color: Colors.grey,
-                    fontWeight: 'w500',
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -267,8 +267,8 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                   content,
                   style: TextStyle(
                     fontSize: 18,
-                    color: isWarning ? Colors.red : AppTheme.textColor,
-                    fontWeight: 'bold',
+                    color: isWarning ? Colors.red : AppTheme.textDark,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
