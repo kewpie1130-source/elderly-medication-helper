@@ -24,10 +24,23 @@ class SettingsPage extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildProfileHeader(),
-          const SizedBox(height: 20),
-          _buildSettingsItem(Icons.person, "使用者資訊編輯", () {}),
-          _buildSettingsItem(Icons.contacts, "聯絡人設定", () {}),
-          _buildSettingsItem(Icons.language, "語言設定", () {}),
+          const SizedBox(height: 24),
+          _buildSettingsItem(Icons.person, "使用者資訊", () {}),
+          const SizedBox(height: 12),
+          _buildSettingsItem(
+            Icons.contacts,
+            "聯絡人設定",
+            () {},
+            subtitle: "設定後提醒通知將傳送至聯絡人的LINE",
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsItem(
+            Icons.language,
+            "語言設定",
+            () {},
+            subtitle: "中文繁體",
+          ),
+          const SizedBox(height: 12),
           _buildSettingsItem(Icons.logout, "登出", () {}),
         ],
       ),
@@ -35,70 +48,92 @@ class SettingsPage extends StatelessWidget {
   }
 
   Widget _buildProfileHeader() {
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const CircleAvatar(
-              radius: 32,
-              backgroundColor: AppTheme.primary,
-              child: Icon(Icons.person, color: Colors.white, size: 34),
-            ),
-            const SizedBox(width: 14),
-            const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "使用者名稱",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textDark,
-                    ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            radius: 36,
+            backgroundColor: AppTheme.primary,
+            child: Icon(Icons.person, color: Colors.white, size: 40),
+          ),
+          const SizedBox(width: 16),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "您好！",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    "您好！健康樂活",
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: AppTheme.textDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                // TODO: 接上更改大頭貼流程。
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primary,
-                textStyle: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
                 ),
-              ),
-              child: const Text("更改大頭貼"),
+                SizedBox(height: 4),
+                Text(
+                  "使用者名稱",
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: 接上更改大頭貼流程。
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            child: const Text(
+              "更改大頭貼",
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSettingsItem(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildSettingsItem(
+    IconData icon,
+    String title,
+    VoidCallback onTap, {
+    String? subtitle,
+  }) {
     return Card(
       color: Colors.white,
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primary),
-        title: Text(title, style: const TextStyle(fontSize: 16)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        leading: Icon(icon, color: AppTheme.primary, size: 26),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
+        subtitle: subtitle == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                ),
+              ),
         trailing: const Icon(Icons.chevron_right),
         onTap: onTap,
       ),
