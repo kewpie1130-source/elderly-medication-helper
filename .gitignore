@@ -17,6 +17,15 @@ migrate_working_dir/
 *.ipr
 *.iws
 .idea/
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+key.properties
+**/local.properties
+android/.gradle/
+android/.kotlin/
 
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
@@ -32,6 +41,12 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+
+# Local service configuration and API keys
+/android/app/google-services.json
+/lib/firebase_options.dart
+/lib/config/app_config.dart
+/firebase.json
 
 # Symbolication related
 app.*.symbols
