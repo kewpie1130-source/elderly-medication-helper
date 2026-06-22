@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
 import '../../models/medicine_model.dart';
 import '../../repositories/medicine_repository.dart';
 import '../../theme/app_theme.dart';
+import '../medicine/medicine_detail_page.dart'; // 跳轉至組員A負責的藥品資訊頁
 import 'add_medicine_page.dart';
-import '../medicine/medicine_detail_page.dart';
 
 class HistoryPage extends StatefulWidget {
-  const HistoryPage({super.key});
+  const HistoryPage({Key? key}) : super(key: key);
 
   @override
   State<HistoryPage> createState() => _HistoryPageState();
@@ -16,10 +15,7 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final MedicineRepository _repository = MedicineRepository();
-  
-  List<MedicineModel> _todayList = [];
-  List<MedicineModel> _thisWeekList = [];
-  List<MedicineModel> _olderList = [];
+  List<MedicineModel> _allMedicines = [];
   bool _isLoading = true;
 
   @override
@@ -28,233 +24,138 @@ class _HistoryPageState extends State<HistoryPage> {
     _loadHistoryData();
   }
 
+  // 從 SQLite 本地資料庫撈取歷史紀錄
   Future<void> _loadHistoryData() async {
     setState(() => _isLoading = true);
     try {
-      final allMedicines = await _repository.getAllMedicines();
-      final now = DateTime.now();
-      final todayStr = DateFormat('yyyy-MM-dd').format(now);
-      final sevenDaysAgo = now.subtract(const Duration(days: 7));
-
-      List<MedicineModel> today = [];
-      List<MedicineModel> thisWeek = [];
-      List<MedicineModel> older = [];
-
-      for (var med in allMedicines) {
-        try {
-          final createdAt = DateTime.parse(med.createdAt);
-          final dateStr = DateFormat('yyyy-MM-dd').format(createdAt);
-
-          if (dateStr == todayStr) {
-            today.add(med);
-          } else if (createdAt.isAfter(sevenDaysAgo)) {
-            thisWeek.add(med);
-          } else {
-            older.add(med);
-          }
-        } catch (_) {
-          older.add(med);
-        }
-      }
-
+      final data = await _repository.getAllMedicines();
       setState(() {
-        _todayList = today;
-        _thisWeekList = thisWeek;
-        _olderList = older;
+        _allMedicines = data;
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('讀取歷史紀錄失敗: $e'), backgroundColor: AppTheme.errorColor),
+      );
     }
+  }
+
+  // 將資料依據建立日期分組（今日 / 本週 / 更早）
+  Map<String, List<MedicineModel>> _groupMedicines(List<MedicineModel> medicines) {
+    Map<String, List<MedicineModel>> groups = {
+      '今日': [],
+      '本週': [],
+      '更早的分組': [],
+    };
+
+    final now = DateTime.now();
+    final todayStr = DateFormat('yyyy-MM-dd').format(now);
+    final sevenDaysAgo = now.subtract(const Duration(days: 7));
+
+    for (var med in medicines) {
+      if (med.createdAt.startsWith(todayStr)) {
+        groups['今日']!.add(med);
+      } else {
+        try {
+          final createdAtDate = DateTime.parse(med.createdAt);
+          if (createdAtDate.isAfter(sevenDaysAgo)) {
+            groups['本週']!.add(med);
+          } else {
+            groups['更早的分組']!.add(med);
+          }
+        } catch (_) {
+          groups['更早的分組']!.add(med);
+        }
+      }
+    }
+    return groups;
   }
 
   @override
   Widget build(BuildContext context) {
+    final groupedData = _groupMedicines(_allMedicines);
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.backgroundColor, // 白色背景
       appBar: AppBar(
-        title: const Text(
-          '用藥紀錄',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textDark,
-          ),
-        ),
-        backgroundColor: AppTheme.background,
-        foregroundColor: AppTheme.textDark,
-        elevation: 0,
+        title: const Text('用藥歷史紀錄', style: TextStyle(fontSize: 24, fontWeight: 'bold')),
+        backgroundColor: Colors.white,
+        foregroundColor: AppTheme.textColor,
+        elevation: 0.5,
         centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 14),
-            child: IconButton(
-              icon: const Icon(
-                Icons.filter_alt_outlined,
-                color: AppTheme.primary,
-                size: 24,
-              ),
-              onPressed: _loadHistoryData,
-            ),
-          ),
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 28),
+            onPressed: _loadHistoryData,
+          )
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : _todayList.isEmpty && _thisWeekList.isEmpty && _olderList.isEmpty
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor))
+          : _allMedicines.isEmpty
               ? _buildEmptyState()
               : ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                  padding: const EdgeInsets.all(16.0),
                   children: [
-                    if (_todayList.isNotEmpty) _buildSection('今日', _todayList),
-                    if (_thisWeekList.isNotEmpty) _buildSection('本週', _thisWeekList),
-                    if (_olderList.isNotEmpty) _buildSection('更早', _olderList),
+                    if (groupedData['今日']!.isNotEmpty) ..._buildSection('今日', groupedData['今日']!),
+                    if (groupedData['本週']!.isNotEmpty) ..._buildSection('本週', groupedData['本週']!),
+                    if (groupedData['更早的分組']!.isNotEmpty) ..._buildSection('更早的分組', groupedData['更早的分組']!),
                   ],
                 ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primary,
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-        onPressed: () {
+      // 長者友善手動新增懸浮按鈕
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          // 跳轉至手動新增頁，並等待回傳值以決定是否重新載入
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddMedicinePage()),
+          );
+          if (result == true) {
+            _loadHistoryData();
+          }
+        },
+        backgroundColor: AppTheme.primaryColor, // 草綠主色
+        icon: const Icon(Icons.add, size: 28, color: Colors.white),
+        label: const Text('手動新增', style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: 'bold')),
+      ),
+    );
+  }
+
+  // 建立分組區塊
+  List<Widget> _buildSection(String title, List<MedicineModel> list) {
+    return [
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+        child: Text(
+          title,
+          style: const TextStyle(fontSize: 20, fontWeight: 'bold', color: AppTheme.textColor),
+        ),
+      ),
+      ...list.map((medicine) => _buildMedicineCard(medicine)).toList(),
+      const SizedBox(height: 12),
+    ];
+  }
+
+  // 依照 UI 規範打造長者友善藥品卡片
+  Widget _buildMedicineCard(MedicineModel medicine) {
+    return Card(
+      elevation: 3, // 陰影規範
+      margin: const EdgeInsets.symmetric(vertical: 8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), // 圓角 20px 規範
+      color: Colors.white,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          // 點擊紀錄進入組員A負責的藥品詳細頁面
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddMedicinePage()),
-          ).then((_) => _loadHistoryData());
+            MaterialPageRoute(
+              builder: (context) => MedicineDetailPage(medicine: medicine),
+            ),
+          );
         },
-      ),
-    );
-  }
-
-  Widget _buildSection(String title, List<MedicineModel> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(2, 14, 2, 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.primary.withValues(alpha: 0.95),
-            ),
-          ),
-        ),
-        ...items.map((med) => _buildHistoryCard(med)),
-      ],
-    );
-  }
-
-  Widget _buildHistoryCard(MedicineModel med) {
-    String scanTime = '09:15';
-    try {
-      final parsed = DateTime.parse(med.createdAt);
-      scanTime = DateFormat('HH:mm').format(parsed);
-    } catch (_) {}
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => MedicineDetailPage(medicine: med),
-              ),
-            ).then((_) => _loadHistoryData());
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.calendar_today,
-                    size: 21,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        med.name,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.textDark,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '拍攝時間：$scanTime',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '預計用完：${med.endDate}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(
-                  Icons.chevron_right,
-                  size: 26,
-                  color: AppTheme.primary,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.assignment_outlined, size: 70, color: Colors.grey.shade400),
-          const SizedBox(height: 12),
-          Text(
-            '尚未有用藥紀錄喔！',
-            style: TextStyle(fontSize: 18, color: Colors.grey.shade600, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-}
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children:
