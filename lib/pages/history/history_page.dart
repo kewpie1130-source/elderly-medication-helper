@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../models/medicine_model.dart';
 import '../../repositories/medicine_repository.dart';
 import '../../theme/app_theme.dart';
+import 'add_medicine_page.dart';
 import '../medicine/medicine_detail_page.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -110,6 +111,16 @@ class _HistoryPageState extends State<HistoryPage> {
                     if (_olderList.isNotEmpty) _buildSection('更早', _olderList),
                   ],
                 ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppTheme.primary,
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddMedicinePage()),
+          ).then((_) => _loadHistoryData());
+        },
+      ),
     );
   }
 
