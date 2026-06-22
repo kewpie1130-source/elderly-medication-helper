@@ -24,6 +24,7 @@ class MedicineRepository {
           } catch (_) {}
         }
 
+        // 🛠️ 完美對齊靖喻規定的 required 欄位格式，補足 indication 欄位映射
         return MedicineModel(
           id: maps[i]['id'] ?? '',
           name: maps[i]['name'] ?? '',
@@ -32,6 +33,7 @@ class MedicineRepository {
           frequency: maps[i]['frequency'] ?? '',
           timing: timings,
           notice: maps[i]['notice'] ?? '',
+          indication: maps[i]['indication'] ?? '', // 🛠️ 完美對齊修正！
           startDate: maps[i]['startDate'] ?? '',
           endDate: maps[i]['endDate'] ?? '',
           imagePath: maps[i]['imagePath'] ?? '',
@@ -39,65 +41,18 @@ class MedicineRepository {
         );
       });
     } catch (e) {
-      print("Error in getAllMedicines: $e");
+      print("getAllMedicines 發生錯誤: $e");
       return [];
     }
   }
 
-  // 2. 新增藥品紀錄
-  Future<bool> insertMedicine(MedicineModel medicine) async {
-    try {
-      final db = await _dbHelper.database;
-
-      final Map<String, dynamic> row = {
-        'id': medicine.id,
-        'name': medicine.name,
-        'type': medicine.type,
-        'dosage': medicine.dosage,
-        'frequency': medicine.frequency,
-        'timing': jsonEncode(medicine.timing),
-        'notice': medicine.notice,
-        'startDate': medicine.startDate,
-        'endDate': medicine.endDate,
-        'imagePath': medicine.imagePath,
-        'createdAt': medicine.createdAt,
-      };
-
-      await db.insert(
-        'medicines',
-        row,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      return true;
-    } catch (e) {
-      print("Error inserting medicine: $e");
-      return false;
-    }
-  }
-
-  // 3. 🛠️ 補上：新增服藥打卡紀錄（DoseLog）的方法
-  Future<bool> insertDoseLog(DoseLogModel log) async {
-    try {
-      final db = await _dbHelper.database;
-
-      final Map<String, dynamic> row = {
-        'id': log.id,
-        'medicineId': log.medicineId,
-        'scheduledTime': log.scheduledTime,
-        'takenTime': log.takenTime,
-        'status': log.status,
-        'createdAt': log.createdAt,
-      };
-
-      await db.insert(
-        'dose_logs',
-        row,
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      return true;
-    } catch (e) {
-      print("Error inserting dose log: $e");
-      return false;
-    }
+  // 🛠️ 補上專案原本要求的 insertDoseLog 實作，讓打卡功能順暢運作
+  Future<int> insertDoseLog(DoseLogModel doseLog) async {
+    final db = await _dbHelper.database;
+    return await db.insert(
+      'dose_logs',
+      doseLog.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 }
