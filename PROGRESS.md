@@ -178,8 +178,8 @@ CREATE TABLE dose_logs (
 - 風險提示：
 
 **組員C**
-- 完成：
-- 修改檔案：
+- 完成：相簿頁優化、設定頁功能串接。
+- 修改檔案：lib/pages/gallery/gallery_page.dart, lib/pages/settings/settings_page.dart
 - 風險提示：
 
 ---
