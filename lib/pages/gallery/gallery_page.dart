@@ -81,7 +81,7 @@ class _GalleryPageState extends State<GalleryPage> {
               Container(
                 height: 38,
                 alignment: Alignment.center,
-                child: const Text("App 拍攝紀錄"),
+                child: const Text("拍攝紀錄"),
               ),
             ],
           ),
