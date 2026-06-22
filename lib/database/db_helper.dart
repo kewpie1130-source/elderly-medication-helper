@@ -2,12 +2,12 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 
-class DbHelper {
+class DatabaseHelper {
   static const _databaseName = "elderly_medication.db";
   static const _databaseVersion = 1;
 
-  DbHelper._privateConstructor();
-  static final DbHelper instance = DbHelper._privateConstructor();
+  DatabaseHelper._privateConstructor();
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static Database? _database;
 
@@ -20,7 +20,7 @@ class DbHelper {
   Future<Database> _initDatabase() async {
     final documentsDirectory = await getApplicationDocumentsDirectory();
     final path = join(documentsDirectory.path, _databaseName);
-    
+
     return await openDatabase(
       path,
       version: _databaseVersion,
@@ -29,7 +29,7 @@ class DbHelper {
   }
 
   Future _onCreate(Database db, int version) async {
-    // 1. 藥品表（配合組長新規範，已加入 indication 欄位）
+    // 1. 藥品表（嚴格符合組長規格書定義）
     await db.execute('''
       CREATE TABLE medicines (
         id TEXT PRIMARY KEY,
@@ -42,8 +42,7 @@ class DbHelper {
         startDate TEXT,
         endDate TEXT,
         imagePath TEXT,
-        createdAt TEXT NOT NULL,
-        indication TEXT DEFAULT ''
+        createdAt TEXT NOT NULL
       )
     ''');
 
@@ -59,11 +58,11 @@ class DbHelper {
       )
     ''');
 
-    // 3. 服藥紀錄表 (組員 A 打卡核心)
+    // 3. 服藥紀錄表
     await db.execute('''
       CREATE TABLE dose_logs (
         id TEXT PRIMARY KEY,
-        medicineId NOT NULL,
+        medicineId TEXT NOT NULL,
         scheduledTime TEXT NOT NULL,
         takenTime TEXT,
         status TEXT NOT NULL,

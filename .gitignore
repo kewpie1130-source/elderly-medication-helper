@@ -58,3 +58,5 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# 排除誤建的外部 Flutter 專案
+elder_medicine_app/
