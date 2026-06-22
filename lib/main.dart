@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase/firebase_service.dart';
 import 'navigation/app_router.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // TODO: 需要從 Firebase Console 下載 android/app/google-services.json。
+  try {
+    await FirebaseService.initialize();
+  } catch (e) {
+    print('Firebase初始化失敗（可能缺少google-services.json）: $e');
+  }
   runApp(const MyApp());
 }
 
