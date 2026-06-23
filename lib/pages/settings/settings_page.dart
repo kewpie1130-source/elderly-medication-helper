@@ -38,7 +38,24 @@ class SettingsPage extends StatelessWidget {
     showDialog(context: context, builder: (_) => SimpleDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("選擇語言", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), children: [SimpleDialogOption(child: const Text("繁體中文"), onPressed: () => Navigator.pop(context)), SimpleDialogOption(child: const Text("English"), onPressed: () => Navigator.pop(context))]));
   }
 
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("確定要登出嗎？", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("確定", style: TextStyle(color: Colors.green)))]));
+    void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("確定要登出嗎？", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false),
+            child: const Text("確定", style: TextStyle(color: Colors.green)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("取消", style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
   }
 }
+
