@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:uuid/uuid.dart';
-import '../../services/tts/tts_service.dart';
 import '../../services/notification/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../repositories/medicine_repository.dart';
@@ -28,8 +27,8 @@ class _ReminderPageState extends State<ReminderPage> {
 
   String? _selectedMedicineId;
   String _selectedMedicineName = "請選擇藥物";
-  final TimeOfDay _selectedTime = const TimeOfDay(hour: 5, minute: 32);
-  final String _selectedRepeatType = "custom";
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 0);
+  String _selectedRepeatType = "daily";
   bool _isLoading = true;
 
   @override
@@ -56,9 +55,18 @@ class _ReminderPageState extends State<ReminderPage> {
           _medicineList = medicines;
           _reminderList = reminders;
           _medicineNameMap = nameMap;
+
           if (medicines.isNotEmpty) {
-            _selectedMedicineId = medicines.first.id.toString();
-            _selectedMedicineName = medicines.first.name.toString();
+            final match = medicines.cast<dynamic>().firstWhere(
+              (m) => m.name.toString() == widget.medicineName,
+              orElse: () => null,
+            );
+            _selectedMedicineId = match != null
+                ? match.id.toString()
+                : medicines.first.id.toString();
+            _selectedMedicineName = match != null
+                ? match.name.toString()
+                : medicines.first.name.toString();
           }
           _isLoading = false;
         });
@@ -72,26 +80,63 @@ class _ReminderPageState extends State<ReminderPage> {
   Future<void> _saveReminder() async {
     if (_selectedMedicineId == null) return;
 
-    final String formattedTime =
-        '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+    final selectedMedicine = _medicineList.firstWhere(
+      (m) => m.id.toString() == _selectedMedicineId,
+      orElse: () => null,
+    );
 
+    List<String> timings = [];
+    if (selectedMedicine != null && selectedMedicine.timing != null) {
+      timings = List<String>.from(selectedMedicine.timing);
+    }
+
+    if (timings.isEmpty) {
+      final String formattedTime =
+          '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+      await _executeSingleSchedule(formattedTime, "用藥時間");
+    } else {
+      for (String timeTag in timings) {
+        String targetTime = "08:00";
+        if (timeTag.contains("早餐")) {
+          targetTime = "08:00";
+        } else if (timeTag.contains("午餐")) {
+          targetTime = "12:30";
+        } else if (timeTag.contains("晚餐")) {
+          targetTime = "18:00";
+        } else if (timeTag.contains("睡前")) {
+          targetTime = "21:30";
+        }
+        await _executeSingleSchedule(targetTime, timeTag);
+      }
+    }
+
+    _loadData();
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('💚 已成功儲存【$_selectedMedicineName】用藥提醒！')),
+    );
+  }
+
+  Future<void> _executeSingleSchedule(String timeStr, String tag) async {
     final newReminder = ReminderModel(
       id: const Uuid().v4(),
       medicineId: _selectedMedicineId!,
-      time: formattedTime,
+      time: timeStr,
       repeatType: _selectedRepeatType,
       enabled: true,
     );
 
     await _reminderRepository.insertReminder(newReminder);
 
+    final parts = timeStr.split(':');
     final now = DateTime.now();
     var scheduleDateTime = DateTime(
       now.year,
       now.month,
       now.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
+      int.parse(parts[0]),
+      int.parse(parts[1]),
     );
     if (scheduleDateTime.isBefore(now)) {
       scheduleDateTime = scheduleDateTime.add(const Duration(days: 1));
@@ -100,18 +145,10 @@ class _ReminderPageState extends State<ReminderPage> {
     await _notificationService.zonedSchedule(
       newReminder.id.hashCode.abs(),
       "🔔 智慧用藥助手",
-      "阿公，吃藥時間到囉！請記得服用【$_selectedMedicineName】。",
+      "阿公、阿嬤，【$tag】時間到囉！請記得服用【$_selectedMedicineName】。",
       tz.TZDateTime.from(scheduleDateTime, tz.local),
       isDaily: _selectedRepeatType == "daily",
     );
-
-    _loadData();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('💚 已成功儲存用藥提醒！')));
   }
 
   Future<void> _toggleEnabled(ReminderModel reminder, bool value) async {
@@ -142,7 +179,7 @@ class _ReminderPageState extends State<ReminderPage> {
         isDaily: reminder.repeatType == "daily",
       );
     } else {
-      await _notificationService.cancel(notifId);
+      await _notificationService.cancel(id: notifId);
     }
     _loadData();
   }
@@ -210,7 +247,13 @@ class _ReminderPageState extends State<ReminderPage> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        value: _selectedMedicineId,
+                        value: _medicineList.isEmpty
+                            ? null
+                            : _selectedMedicineId,
+                        hint: const Text(
+                          "請選擇藥物",
+                          style: TextStyle(color: Colors.grey),
+                        ),
                         isExpanded: true,
                         items: _medicineList.map((med) {
                           return DropdownMenuItem<String>(
@@ -227,7 +270,7 @@ class _ReminderPageState extends State<ReminderPage> {
                         onChanged: (val) {
                           if (val == null) return;
                           final selected = _medicineList.firstWhere(
-                            (m) => m.id.toString() == val,
+                            (m) => m != null && m.id.toString() == val,
                           );
                           setState(() {
                             _selectedMedicineId = val;
@@ -236,6 +279,88 @@ class _ReminderPageState extends State<ReminderPage> {
                         },
                       ),
                     ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () =>
+                            setState(() => _selectedRepeatType = "daily"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _selectedRepeatType == "daily"
+                              ? AppTheme.primary
+                              : Colors.grey[200],
+                        ),
+                        child: Text(
+                          "每天",
+                          style: TextStyle(
+                            color: _selectedRepeatType == "daily"
+                                ? Colors.white
+                                : AppTheme.textDark,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () =>
+                            setState(() => _selectedRepeatType = "weekly"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _selectedRepeatType == "weekly"
+                              ? AppTheme.primary
+                              : Colors.grey[200],
+                        ),
+                        child: Text(
+                          "每週",
+                          style: TextStyle(
+                            color: _selectedRepeatType == "weekly"
+                                ? Colors.white
+                                : AppTheme.textDark,
+                          ),
+                        ),
+                      ),
+                      ElevatedButton(
+                        onPressed: () =>
+                            setState(() => _selectedRepeatType = "custom"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _selectedRepeatType == "custom"
+                              ? AppTheme.primary
+                              : Colors.grey[200],
+                        ),
+                        child: Text(
+                          "自訂",
+                          style: TextStyle(
+                            color: _selectedRepeatType == "custom"
+                                ? Colors.white
+                                : AppTheme.textDark,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    title: const Text(
+                      "選擇時間",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    trailing: Text(
+                      _selectedTime.format(context),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    onTap: () async {
+                      final time = await showTimePicker(
+                        context: context,
+                        initialTime: _selectedTime,
+                      );
+                      if (time != null) setState(() => _selectedTime = time);
+                    },
                   ),
                   const SizedBox(height: 20),
                   const Text(
@@ -295,7 +420,11 @@ class _ReminderPageState extends State<ReminderPage> {
                                     ),
                                     const SizedBox(width: 8),
                                     Text(
-                                      reminder.repeatType,
+                                      reminder.repeatType == 'daily'
+                                          ? '每天'
+                                          : reminder.repeatType == 'weekly'
+                                          ? '每週'
+                                          : '自訂',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         color: Colors.grey,

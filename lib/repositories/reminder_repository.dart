@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
-// ✅ 終極修正：由 repositories 出發向上退一層 (../)，精準命中 database 資料夾與 models
 import '../database/db_helper.dart';
 import '../models/reminder_model.dart';
 
@@ -9,7 +8,8 @@ class ReminderRepository {
   factory ReminderRepository() => _instance;
   ReminderRepository._internal();
 
-  final DbHelper _dbHelper = DbHelper();
+  // 對齊組員 A 的 DatabaseHelper 單例對象
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   Future<int> insertReminder(ReminderModel reminder) async {
     try {
