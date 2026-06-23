@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -18,16 +19,23 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  Future<void> _saveData(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
   void _showEditDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("編輯名稱", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), content: const TextField(decoration: InputDecoration(hintText: "請輸入姓名")), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("儲存", style: TextStyle(color: Colors.green)))]));
+    final TextEditingController controller = TextEditingController();
+    showDialog(context: context, builder: (_) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("編輯名稱", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), content: TextField(controller: controller, decoration: const InputDecoration(hintText: "請輸入姓名")), actions: [TextButton(onPressed: () async { await _saveData('userName', controller.text); if (context.mounted) Navigator.pop(context); }, child: const Text("儲存", style: TextStyle(color: Colors.green)))]));
   }
 
   void _showContactDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("聯絡人 LINE ID", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), content: const TextField(decoration: InputDecoration(hintText: "請輸入 ID")), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("儲存", style: TextStyle(color: Colors.green)))]));
+    final TextEditingController controller = TextEditingController();
+    showDialog(context: context, builder: (_) => AlertDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("輸入聯絡人 LINE ID", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), content: TextField(controller: controller, decoration: const InputDecoration(hintText: "請輸入 ID")), actions: [TextButton(onPressed: () async { await _saveData('lineId', controller.text); if (context.mounted) Navigator.pop(context); }, child: const Text("儲存", style: TextStyle(color: Colors.green)))]));
   }
 
   void _showLanguageDialog(BuildContext context) {
-    showDialog(context: context, builder: (_) => SimpleDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("選擇語言", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), children: [SimpleDialogOption(child: const Text("繁體中文")), SimpleDialogOption(child: const Text("English"))]));
+    showDialog(context: context, builder: (_) => SimpleDialog(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), title: const Text("選擇語言", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)), children: [SimpleDialogOption(child: const Text("繁體中文"), onPressed: () => Navigator.pop(context)), SimpleDialogOption(child: const Text("English"), onPressed: () => Navigator.pop(context))]));
   }
 
   void _showLogoutDialog(BuildContext context) {
