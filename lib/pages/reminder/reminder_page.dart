@@ -1,323 +1,377 @@
 import 'package:flutter/material.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:uuid/uuid.dart';
+import 'package:timezone/timezone.dart' as tz; 
 import '../../services/tts/tts_service.dart';
 import '../../services/notification/notification_service.dart';
-import '../../theme/app_theme.dart';
-import '../../repositories/medicine_repository.dart';
-import '../../repositories/reminder_repository.dart';
-import '../../models/reminder_model.dart';
+import '../../theme/app_theme.dart'; 
+import 'widgets/reminder_modal.dart';
+import 'widgets/contact_modal.dart';
 
 class ReminderPage extends StatefulWidget {
   final String? medicineName;
 
-  const ReminderPage({super.key, this.medicineName});
+  const ReminderPage({
+    super.key,
+    this.medicineName,
+  });
 
   @override
   State<ReminderPage> createState() => _ReminderPageState();
 }
 
 class _ReminderPageState extends State<ReminderPage> {
+  final TtsService _ttsService = TtsService();
   final NotificationService _notificationService = NotificationService();
-  final ReminderRepository _reminderRepository = ReminderRepository();
-  final MedicineRepository _medicineRepository = MedicineRepository();
+  TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 30);
+  int _selectedFrequencyIndex = 0;
+  bool _reminderEnabled = true;
 
-  List<dynamic> _medicineList = [];
-  List<ReminderModel> _reminderList = [];
-  Map<String, String> _medicineNameMap = {};
-
-  String? _selectedMedicineId;
-  String _selectedMedicineName = "請選擇藥物";
-  final TimeOfDay _selectedTime = const TimeOfDay(hour: 5, minute: 32);
-  final String _selectedRepeatType = "custom";
-  bool _isLoading = true;
+  static const List<String> _frequencyLabels = ['每天', '每週', '自訂'];
 
   @override
   void initState() {
     super.initState();
+    _ttsService.initTts();
     _notificationService.initialize();
-    _loadData();
-  }
 
-  Future<void> _loadData() async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-    try {
-      final medicines = await _medicineRepository.getAllMedicines();
-      final reminders = await _reminderRepository.getAllReminders();
-
-      final Map<String, String> nameMap = {};
-      for (var med in medicines) {
-        nameMap[med.id.toString()] = med.name.toString();
-      }
-
-      if (mounted) {
-        setState(() {
-          _medicineList = medicines;
-          _reminderList = reminders;
-          _medicineNameMap = nameMap;
-          if (medicines.isNotEmpty) {
-            _selectedMedicineId = medicines.first.id.toString();
-            _selectedMedicineName = medicines.first.name.toString();
-          }
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("撈取數據異常: $e");
-      if (mounted) setState(() => _isLoading = false);
+    if (widget.medicineName != null && widget.medicineName!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _triggerOfficialFlow(context, widget.medicineName!);
+      });
     }
-  }
-
-  Future<void> _saveReminder() async {
-    if (_selectedMedicineId == null) return;
-
-    final String formattedTime =
-        '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
-
-    final newReminder = ReminderModel(
-      id: const Uuid().v4(),
-      medicineId: _selectedMedicineId!,
-      time: formattedTime,
-      repeatType: _selectedRepeatType,
-      enabled: true,
-    );
-
-    await _reminderRepository.insertReminder(newReminder);
-
-    final now = DateTime.now();
-    var scheduleDateTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      _selectedTime.hour,
-      _selectedTime.minute,
-    );
-    if (scheduleDateTime.isBefore(now)) {
-      scheduleDateTime = scheduleDateTime.add(const Duration(days: 1));
-    }
-
-    await _notificationService.zonedSchedule(
-      newReminder.id.hashCode.abs(),
-      "🔔 智慧用藥助手",
-      "阿公，吃藥時間到囉！請記得服用【$_selectedMedicineName】。",
-      tz.TZDateTime.from(scheduleDateTime, tz.local),
-      isDaily: _selectedRepeatType == "daily",
-    );
-
-    _loadData();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('💚 已成功儲存用藥提醒！')));
-  }
-
-  Future<void> _toggleEnabled(ReminderModel reminder, bool value) async {
-    await _reminderRepository.updateReminderEnabled(reminder.id, value);
-    final int notifId = reminder.id.hashCode.abs();
-
-    if (value) {
-      final parts = reminder.time.split(':');
-      final now = DateTime.now();
-      var scheduleDateTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        int.parse(parts[0]),
-        int.parse(parts[1]),
-      );
-      if (scheduleDateTime.isBefore(now)) {
-        scheduleDateTime = scheduleDateTime.add(const Duration(days: 1));
-      }
-      final String currentMedName =
-          _medicineNameMap[reminder.medicineId] ?? "已知藥物";
-
-      await _notificationService.zonedSchedule(
-        notifId,
-        "🔔 智慧用藥助手",
-        "阿公，吃藥時間到囉！請記得服用【$currentMedName】。",
-        tz.TZDateTime.from(scheduleDateTime, tz.local),
-        isDaily: reminder.repeatType == "daily",
-      );
-    } else {
-      await _notificationService.cancel(notifId);
-    }
-    _loadData();
   }
 
   @override
   Widget build(BuildContext context) {
+    final String currentMedicine = widget.medicineName ?? "降血壓藥";
+
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text(
           '新增提醒',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
             color: AppTheme.textDark,
           ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: AppTheme.background,
+        foregroundColor: AppTheme.primary,
         elevation: 0,
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: _saveReminder,
+            onPressed: () => _triggerOfficialFlow(context, currentMedicine),
             child: const Text(
               '儲存',
               style: TextStyle(
                 color: AppTheme.primary,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          _buildSettingsCard(context),
+          const SizedBox(height: 18),
+          _buildCurrentReminderCard(currentMedicine),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '設定時間',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: _pickTime,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F8F8),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFE8E8E8)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
-                    '選擇藥物',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
+                  Text(
+                    _selectedTime.hour.toString().padLeft(2, '0'),
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedMedicineId,
-                        isExpanded: true,
-                        items: _medicineList.map((med) {
-                          return DropdownMenuItem<String>(
-                            value: med.id.toString(),
-                            child: Text(
-                              med.name.toString(),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val == null) return;
-                          final selected = _medicineList.firstWhere(
-                            (m) => m.id.toString() == val,
-                          );
-                          setState(() {
-                            _selectedMedicineId = val;
-                            _selectedMedicineName = selected.name.toString();
-                          });
-                        },
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 14),
+                    child: Text(
+                      ':',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textDark,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    '目前的提醒',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primary,
+                  Text(
+                    _selectedTime.minute.toString().padLeft(2, '0'),
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _reminderList.length,
-                    itemBuilder: (context, index) {
-                      final reminder = _reminderList[index];
-                      final medName =
-                          _medicineNameMap[reminder.medicineId] ?? "未知藥物";
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  reminder.time,
-                                  style: const TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    Text(
-                                      medName,
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: AppTheme.textDark,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      reminder.repeatType,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            Switch(
-                              activeThumbColor: AppTheme.primary,
-                              value: reminder.enabled,
-                              onChanged: (val) => _toggleEnabled(reminder, val),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
             ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            '重複頻率',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(_frequencyLabels.length, (index) {
+              final bool selected = _selectedFrequencyIndex == index;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    right: index == _frequencyLabels.length - 1 ? 0 : 8,
+                  ),
+                  child: ChoiceChip(
+                    label: Center(child: Text(_frequencyLabels[index])),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() => _selectedFrequencyIndex = index);
+                    },
+                    showCheckmark: false,
+                    selectedColor: AppTheme.primary,
+                    backgroundColor: const Color(0xFFF5F5F5),
+                    labelStyle: TextStyle(
+                      color: selected ? Colors.white : AppTheme.textDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: selected ? AppTheme.primary : Colors.transparent,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrentReminderCard(String currentMedicine) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 2, bottom: 10),
+          child: Text(
+            '目前的提醒',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Column(
+                children: [
+                  Text(
+                    _formatSelectedTime(),
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    color: Colors.grey.shade500,
+                    size: 20,
+                  ),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      currentMedicine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _frequencyLabels[_selectedFrequencyIndex],
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _reminderEnabled,
+                activeThumbColor: Colors.white,
+                activeTrackColor: AppTheme.primary,
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: Colors.grey.shade300,
+                onChanged: (value) {
+                  setState(() => _reminderEnabled = value);
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pickTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primary,
+              onPrimary: Colors.white,
+              onSurface: AppTheme.textDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked == null) return;
+    setState(() => _selectedTime = picked);
+  }
+
+  String _formatSelectedTime() {
+    return '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  void _triggerOfficialFlow(BuildContext context, String targetMedicine) {
+    _ttsService.speak("是否需要設置用藥提醒？您可以設定時間提醒自己按時服藥。");
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ReminderModal(
+        onChoice: (wantsReminder) async { 
+          Navigator.of(dialogContext).pop(); 
+          
+          if (wantsReminder) {
+            debugPrint("長者選擇：是，前往設定用藥提醒 -> 藥物：$targetMedicine");
+        
+            final tz.TZDateTime scheduledTime = tz.TZDateTime.now(tz.local).add(const Duration(seconds: 10));
+            final int notificationId = targetMedicine.hashCode.abs();
+
+            await _notificationService.zonedSchedule(
+              notificationId, 
+              "🔔 智慧用藥助手", 
+              "阿公，吃藥時間到囉！請記得服用【$targetMedicine】。", 
+              scheduledTime,
+              isDaily: true, 
+            );
+
+            Future.delayed(const Duration(milliseconds: 500), () {
+              // ✅ 核心修正：非同步時序延遲後，先進行 mounted 檢查
+              if (!mounted) return;
+              
+              _ttsService.speak("是否要通知聯絡人？設定後，提醒訊息將傳送至聯絡人的 LINE。");
+              
+              // ✅ 核心修正：在 showDialog 中，直接使用當前 State 的無風險對象 `this.context`，徹底清除跨 async gaps 警告！
+              if (this.context.mounted) {
+                showDialog(
+                  context: this.context, 
+                  barrierDismissible: false,
+                  builder: (context) => ContactModal(
+                    onSave: (lineId) {
+                      debugPrint("長者成功綁定聯絡人 LINE ID: $lineId");
+                    },
+                    onCancel: () {
+                      debugPrint("長者點擊不需要，依據官方設計圖流程：強制退回畫面 2");
+                      Navigator.of(context).pop(); 
+                      Navigator.of(context).pop(); 
+                    },
+                  ),
+                );
+              }
+            });
+          }
+        },
+      ),
     );
   }
 }
