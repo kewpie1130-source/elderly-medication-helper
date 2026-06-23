@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz; 
+import 'package:uuid/uuid.dart';
+import '../../models/medicine_model.dart';
+import '../../models/reminder_model.dart';
+import '../../repositories/medicine_repository.dart';
+import '../../repositories/reminder_repository.dart';
 import '../../services/tts/tts_service.dart';
 import '../../services/notification/notification_service.dart';
 import '../../theme/app_theme.dart'; 
@@ -23,7 +28,9 @@ class _ReminderPageState extends State<ReminderPage> {
   final NotificationService _notificationService = NotificationService();
   TimeOfDay _selectedTime = const TimeOfDay(hour: 8, minute: 30);
   int _selectedFrequencyIndex = 0;
-  bool _reminderEnabled = true;
+  List<MedicineModel> _medicineList = [];
+  MedicineModel? _selectedMedicine;
+  List<ReminderModel> _reminderList = [];
 
   static const List<String> _frequencyLabels = ['每天', '每週', '自訂'];
 
@@ -32,6 +39,8 @@ class _ReminderPageState extends State<ReminderPage> {
     super.initState();
     _ttsService.initTts();
     _notificationService.initialize();
+    _loadMedicines();
+    _loadReminders();
 
     if (widget.medicineName != null && widget.medicineName!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -42,7 +51,8 @@ class _ReminderPageState extends State<ReminderPage> {
 
   @override
   Widget build(BuildContext context) {
-    final String currentMedicine = widget.medicineName ?? "降血壓藥";
+    final String currentMedicine =
+        _selectedMedicine?.name ?? widget.medicineName ?? "尚未選擇藥物";
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -61,7 +71,21 @@ class _ReminderPageState extends State<ReminderPage> {
         centerTitle: true,
         actions: [
           TextButton(
-            onPressed: () => _triggerOfficialFlow(context, currentMedicine),
+            onPressed: () async {
+              if (_selectedMedicine != null) {
+                final reminder = ReminderModel(
+                  id: const Uuid().v4(),
+                  medicineId: _selectedMedicine!.id,
+                  time: _formatSelectedTime(),
+                  repeatType: _frequencyLabels[_selectedFrequencyIndex],
+                  enabled: true,
+                );
+                await ReminderRepository().insertReminder(reminder);
+                await _loadReminders();
+              }
+              if (!mounted) return;
+              _triggerOfficialFlow(this.context, currentMedicine);
+            },
             child: const Text(
               '儲存',
               style: TextStyle(
@@ -79,7 +103,7 @@ class _ReminderPageState extends State<ReminderPage> {
         children: [
           _buildSettingsCard(context),
           const SizedBox(height: 18),
-          _buildCurrentReminderCard(currentMedicine),
+          _buildCurrentReminderCard(),
         ],
       ),
     );
@@ -158,6 +182,29 @@ class _ReminderPageState extends State<ReminderPage> {
           ),
           const SizedBox(height: 20),
           const Text(
+            '選擇藥物',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textDark,
+            ),
+          ),
+          const SizedBox(height: 12),
+          DropdownButton<MedicineModel>(
+            value: _selectedMedicine,
+            isExpanded: true,
+            underline: const SizedBox(),
+            hint: Text(
+              _medicineList.isEmpty ? '尚無藥物紀錄，請先拍攝辨識' : '請選擇藥物',
+            ),
+            items: _medicineList.map((m) => DropdownMenuItem(
+              value: m,
+              child: Text(m.name),
+            )).toList(),
+            onChanged: (value) => setState(() => _selectedMedicine = value),
+          ),
+          const SizedBox(height: 20),
+          const Text(
             '重複頻率',
             style: TextStyle(
               fontSize: 15,
@@ -204,7 +251,7 @@ class _ReminderPageState extends State<ReminderPage> {
     );
   }
 
-  Widget _buildCurrentReminderCard(String currentMedicine) {
+  Widget _buildCurrentReminderCard() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -219,81 +266,120 @@ class _ReminderPageState extends State<ReminderPage> {
             ),
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 18,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Column(
-                children: [
-                  Text(
-                    _formatSelectedTime(),
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Icon(
-                    Icons.notifications_active_outlined,
-                    color: Colors.grey.shade500,
-                    size: 20,
-                  ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      currentMedicine,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _frequencyLabels[_selectedFrequencyIndex],
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Switch(
-                value: _reminderEnabled,
-                activeThumbColor: Colors.white,
-                activeTrackColor: AppTheme.primary,
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: Colors.grey.shade300,
-                onChanged: (value) {
-                  setState(() => _reminderEnabled = value);
-                },
-              ),
-            ],
+        ..._reminderList.map(
+          (reminder) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildReminderItem(reminder),
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildReminderItem(ReminderModel reminder) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Column(
+            children: [
+              Text(
+                reminder.time,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Icon(
+                Icons.notifications_active_outlined,
+                color: Colors.grey.shade500,
+                size: 20,
+              ),
+            ],
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getMedicineNameById(reminder.medicineId),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  reminder.repeatType,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: reminder.enabled,
+            activeThumbColor: Colors.white,
+            activeTrackColor: AppTheme.primary,
+            inactiveThumbColor: Colors.white,
+            inactiveTrackColor: Colors.grey.shade300,
+            onChanged: (value) async {
+              await ReminderRepository().updateReminderEnabled(
+                reminder.id,
+                value,
+              );
+              await _loadReminders();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getMedicineNameById(String medicineId) {
+    final matchedMedicines = _medicineList.where(
+      (medicine) => medicine.id == medicineId,
+    );
+    if (matchedMedicines.isEmpty) return '未知藥物';
+    return matchedMedicines.first.name;
+  }
+
+  Future<void> _loadMedicines() async {
+    final repo = MedicineRepository();
+    final meds = await repo.getAllMedicines();
+    if (mounted) {
+      setState(() {
+        _medicineList = meds;
+        if (meds.isNotEmpty) _selectedMedicine = meds.first;
+      });
+    }
+  }
+
+  Future<void> _loadReminders() async {
+    final reminders = await ReminderRepository().getAllReminders();
+    if (mounted) {
+      setState(() => _reminderList = reminders);
+    }
   }
 
   Future<void> _pickTime() async {
