@@ -9,7 +9,7 @@ class ReminderRepository {
   factory ReminderRepository() => _instance;
   ReminderRepository._internal();
 
-  final DbHelper _dbHelper = DbHelper();
+  final DatabaseHelper _dbHelper = DatabaseHelper.instance;
 
   Future<int> insertReminder(ReminderModel reminder) async {
     try {
