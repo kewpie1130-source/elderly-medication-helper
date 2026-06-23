@@ -42,7 +42,8 @@ class DatabaseHelper {
         startDate TEXT,
         endDate TEXT,
         imagePath TEXT,
-        createdAt TEXT NOT NULL
+        createdAt TEXT NOT NULL,
+        indication TEXT DEFAULT ''
       )
     ''');
 
