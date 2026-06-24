@@ -7,6 +7,18 @@ import '../../theme/app_theme.dart';
 import '../medicine/medicine_detail_page.dart';
 import 'add_medicine_page.dart';
 
+class MedicineBatch {
+  final String batchId;
+  final List<MedicineModel> medicines;
+  final String createdAt;
+
+  MedicineBatch({
+    required this.batchId,
+    required this.medicines,
+    required this.createdAt,
+  });
+}
+
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
 
@@ -45,10 +57,34 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  Map<String, List<MedicineModel>> _groupMedicines(
-    List<MedicineModel> medicines,
+  List<MedicineBatch> _groupIntoBatches(List<MedicineModel> medicines) {
+    final Map<String, List<MedicineModel>> batchMap = {};
+
+    for (final med in medicines) {
+      // 沒有batchId的（手動新增的單筆），各自獨立成一個批次，用自己的id當batchId
+      final key = med.batchId.isNotEmpty ? med.batchId : 'single_${med.id}';
+      batchMap.putIfAbsent(key, () => []).add(med);
+    }
+
+    final batches = batchMap.entries.map((entry) {
+      final meds = entry.value;
+      // 用該批次第一筆的createdAt代表整批的時間
+      return MedicineBatch(
+        batchId: entry.key,
+        medicines: meds,
+        createdAt: meds.first.createdAt,
+      );
+    }).toList();
+
+    // 依時間新到舊排序
+    batches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return batches;
+  }
+
+  Map<String, List<MedicineBatch>> _groupBatchesByTime(
+    List<MedicineBatch> batches,
   ) {
-    final groups = <String, List<MedicineModel>>{
+    final groups = <String, List<MedicineBatch>>{
       '今日': [],
       '本週': [],
       '更早': [],
@@ -58,19 +94,19 @@ class _HistoryPageState extends State<HistoryPage> {
     final todayStr = DateFormat('yyyy-MM-dd').format(now);
     final sevenDaysAgo = now.subtract(const Duration(days: 7));
 
-    for (final med in medicines) {
-      if (med.createdAt.startsWith(todayStr)) {
-        groups['今日']!.add(med);
+    for (final batch in batches) {
+      if (batch.createdAt.startsWith(todayStr)) {
+        groups['今日']!.add(batch);
       } else {
         try {
-          final createdAtDate = DateTime.parse(med.createdAt);
+          final createdAtDate = DateTime.parse(batch.createdAt);
           if (createdAtDate.isAfter(sevenDaysAgo)) {
-            groups['本週']!.add(med);
+            groups['本週']!.add(batch);
           } else {
-            groups['更早']!.add(med);
+            groups['更早']!.add(batch);
           }
         } catch (_) {
-          groups['更早']!.add(med);
+          groups['更早']!.add(batch);
         }
       }
     }
@@ -79,7 +115,8 @@ class _HistoryPageState extends State<HistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final groupedData = _groupMedicines(_allMedicines);
+    final batches = _groupIntoBatches(_allMedicines);
+    final groupedData = _groupBatchesByTime(batches);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -92,12 +129,6 @@ class _HistoryPageState extends State<HistoryPage> {
         foregroundColor: AppTheme.textDark,
         elevation: 0.5,
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 28),
-            onPressed: _loadHistoryData,
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(
@@ -116,7 +147,7 @@ class _HistoryPageState extends State<HistoryPage> {
                       ..._buildSection('更早', groupedData['更早']!),
                   ],
                 ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
             context,
@@ -125,20 +156,12 @@ class _HistoryPageState extends State<HistoryPage> {
           _loadHistoryData();
         },
         backgroundColor: AppTheme.primary,
-        icon: const Icon(Icons.add, size: 28, color: Colors.white),
-        label: const Text(
-          '手動新增',
-          style: TextStyle(
-            fontSize: 18,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        child: const Icon(Icons.add, size: 28, color: Colors.white),
       ),
     );
   }
 
-  List<Widget> _buildSection(String title, List<MedicineModel> list) {
+  List<Widget> _buildSection(String title, List<MedicineBatch> list) {
     return [
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
@@ -151,16 +174,20 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ),
       ),
-      ...list.map((medicine) => _buildMedicineCard(medicine)),
+      ...list.map((batch) => _buildBatchCard(batch)),
       const SizedBox(height: 12),
     ];
   }
 
-  Widget _buildMedicineCard(MedicineModel medicine) {
+  Widget _buildBatchCard(MedicineBatch batch) {
     String scanTime = '未知';
     try {
-      scanTime = DateFormat('HH:mm').format(DateTime.parse(medicine.createdAt));
+      scanTime = DateFormat('HH:mm').format(DateTime.parse(batch.createdAt));
     } catch (_) {}
+
+    final count = batch.medicines.length;
+    final firstName = batch.medicines.first.name;
+    final displayTitle = count > 1 ? '$firstName 等 $count 種藥品' : firstName;
 
     return Card(
       elevation: 3,
@@ -169,13 +196,27 @@ class _HistoryPageState extends State<HistoryPage> {
       color: Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => MedicineDetailPage(medicine: medicine),
-            ),
-          ).then((_) => _loadHistoryData());
+        onTap: () async {
+          if (count == 1) {
+            // 只有一種藥，直接進詳情頁
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    MedicineDetailPage(medicine: batch.medicines.first),
+              ),
+            );
+          } else {
+            // 多種藥，進批次清單頁（先用簡單ListView顯示，點擊個別藥品才進詳情）
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    _BatchDetailPage(medicines: batch.medicines),
+              ),
+            );
+          }
+          _loadHistoryData();
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -188,8 +229,8 @@ class _HistoryPageState extends State<HistoryPage> {
                   color: AppTheme.primary.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.calendar_today,
+                child: Icon(
+                  count > 1 ? Icons.medical_services : Icons.calendar_today,
                   size: 21,
                   color: AppTheme.primary,
                 ),
@@ -200,7 +241,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      medicine.name,
+                      displayTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -212,18 +253,7 @@ class _HistoryPageState extends State<HistoryPage> {
                     const SizedBox(height: 4),
                     Text(
                       '拍攝時間：$scanTime',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '預計用完：${medicine.endDate}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -257,6 +287,57 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _BatchDetailPage extends StatelessWidget {
+  final List<MedicineModel> medicines;
+
+  const _BatchDetailPage({required this.medicines});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: Text(
+          '本次共 ${medicines.length} 種藥品',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: medicines.length,
+        itemBuilder: (context, index) {
+          final med = medicines[index];
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: ListTile(
+              leading: const Icon(Icons.medication, color: AppTheme.primary),
+              title: Text(
+                med.name,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle:
+                  Text(med.dosage.isEmpty ? med.type : '${med.type} · ${med.dosage}'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => MedicineDetailPage(medicine: med),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }

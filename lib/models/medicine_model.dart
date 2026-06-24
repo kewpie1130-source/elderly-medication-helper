@@ -16,6 +16,7 @@ class MedicineModel {
   final String endDate;
   final String imagePath;
   final String createdAt;
+  final String batchId;
 
   const MedicineModel({
     required this.id,
@@ -30,6 +31,7 @@ class MedicineModel {
     required this.endDate,
     required this.imagePath,
     required this.createdAt,
+    this.batchId = '',
   });
 
   factory MedicineModel.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class MedicineModel {
       endDate: json['endDate'] as String? ?? '',
       imagePath: json['imagePath'] as String? ?? '',
       createdAt: json['createdAt'] as String? ?? '',
+      batchId: json['batchId'] as String? ?? '',
     );
   }
 
@@ -63,6 +66,7 @@ class MedicineModel {
       'endDate': endDate,
       'imagePath': imagePath,
       'createdAt': createdAt,
+      'batchId': batchId,
     };
   }
 
@@ -80,6 +84,7 @@ class MedicineModel {
       endDate: map['endDate'] as String? ?? '',
       imagePath: map['imagePath'] as String? ?? '',
       createdAt: map['createdAt'] as String? ?? '',
+      batchId: map['batchId'] as String? ?? '',
     );
   }
 
@@ -97,6 +102,7 @@ class MedicineModel {
       'endDate': endDate,
       'imagePath': imagePath,
       'createdAt': createdAt,
+      'batchId': batchId,
     };
   }
 
@@ -113,6 +119,7 @@ class MedicineModel {
     String? endDate,
     String? imagePath,
     String? createdAt,
+    String? batchId,
   }) {
     return MedicineModel(
       id: id ?? this.id,
@@ -127,6 +134,7 @@ class MedicineModel {
       endDate: endDate ?? this.endDate,
       imagePath: imagePath ?? this.imagePath,
       createdAt: createdAt ?? this.createdAt,
+      batchId: batchId ?? this.batchId,
     );
   }
 

@@ -43,7 +43,8 @@ class DatabaseHelper {
         endDate TEXT,
         imagePath TEXT,
         createdAt TEXT NOT NULL,
-        indication TEXT DEFAULT ''
+        indication TEXT DEFAULT '',
+        batchId TEXT DEFAULT ''
       )
     ''');
 

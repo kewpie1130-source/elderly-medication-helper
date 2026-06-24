@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../models/medicine_model.dart';
 import '../../repositories/medicine_repository.dart';
@@ -135,8 +136,13 @@ class _CameraPageState extends State<CameraPage> {
         return;
       }
 
+      final batchId = const Uuid().v4();
+      final medicinesWithBatch = medicines
+          .map((m) => m.copyWith(batchId: batchId))
+          .toList();
+
       await _ttsService.speak(
-        '已為您辨識出${medicines.length}種藥品，請確認資訊是否正確',
+        '已為您辨識出${medicinesWithBatch.length}種藥品，請確認資訊是否正確',
       );
 
       if (!mounted) return;
@@ -144,14 +150,14 @@ class _CameraPageState extends State<CameraPage> {
       final confirmed = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-          builder: (_) => MedicinePlaceholderPage(medicines: medicines),
+          builder: (_) => MedicinePlaceholderPage(medicines: medicinesWithBatch),
         ),
       );
 
       // 使用者在確認頁按下「確認加入」才會回傳true，才繼續往下走
       if (confirmed != true || !mounted) return;
 
-      await _showReminderPrompt(medicines.first.name);
+      await _showReminderPrompt(medicinesWithBatch.first.name);
     } catch (error) {
       if (!mounted) return;
       if (dialogShown) {
