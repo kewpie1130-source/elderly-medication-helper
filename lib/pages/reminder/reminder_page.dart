@@ -306,81 +306,117 @@ class _ReminderPageState extends State<ReminderPage> {
   }
 
   Widget _buildReminderItem(ReminderModel reminder) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
+    return Dismissible(
+      key: Key(reminder.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 28),
       ),
-      child: Row(
-        children: [
-          Column(
-            children: [
-              Text(
-                reminder.time,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.textDark,
-                ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('刪除提醒'),
+            content: const Text('確定要刪除這個提醒嗎？'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
               ),
-              const SizedBox(height: 6),
-              Icon(
-                Icons.notifications_active_outlined,
-                color: Colors.grey.shade500,
-                size: 20,
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('刪除', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      onDismissed: (direction) async {
+        await ReminderRepository().deleteReminder(reminder.id);
+        await _loadReminders();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Column(
               children: [
                 Text(
-                  _getMedicineNameById(reminder.medicineId),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  reminder.time,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                     color: AppTheme.textDark,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  reminder.repeatType,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
+                const SizedBox(height: 6),
+                Icon(
+                  Icons.notifications_active_outlined,
+                  color: Colors.grey.shade500,
+                  size: 20,
                 ),
               ],
             ),
-          ),
-          Switch(
-            value: reminder.enabled,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppTheme.primary,
-            inactiveThumbColor: Colors.white,
-            inactiveTrackColor: Colors.grey.shade300,
-            onChanged: (value) async {
-              await ReminderRepository().updateReminderEnabled(
-                reminder.id,
-                value,
-              );
-              await _loadReminders();
-            },
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getMedicineNameById(reminder.medicineId),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    reminder.repeatType,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: reminder.enabled,
+              activeThumbColor: Colors.white,
+              activeTrackColor: AppTheme.primary,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: Colors.grey.shade300,
+              onChanged: (value) async {
+                await ReminderRepository().updateReminderEnabled(
+                  reminder.id,
+                  value,
+                );
+                await _loadReminders();
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
