@@ -67,18 +67,53 @@ class _ReminderPageState extends State<ReminderPage> {
           TextButton(
             onPressed: () async {
               if (_selectedMedicine != null) {
+                final timeString = _formatSelectedTime();
                 final reminder = ReminderModel(
                   id: const Uuid().v4(),
                   medicineId: _selectedMedicine!.id,
-                  time: _formatSelectedTime(),
+                  time: timeString,
                   repeatType: _frequencyLabels[_selectedFrequencyIndex],
                   enabled: true,
                 );
                 await ReminderRepository().insertReminder(reminder);
+
+                // 排程真正的本地通知，用使用者實際選擇的時間
+                final now = DateTime.now();
+                var scheduledDateTime = tz.TZDateTime(
+                  tz.local,
+                  now.year,
+                  now.month,
+                  now.day,
+                  _selectedTime.hour,
+                  _selectedTime.minute,
+                );
+                // 若設定時間已過今天，排到明天
+                if (scheduledDateTime.isBefore(tz.TZDateTime.now(tz.local))) {
+                  scheduledDateTime =
+                      scheduledDateTime.add(const Duration(days: 1));
+                }
+                await _notificationService.zonedSchedule(
+                  reminder.id.hashCode.abs(),
+                  '用藥提醒',
+                  '請記得服用：${_selectedMedicine!.name}',
+                  scheduledDateTime,
+                );
+
                 await _loadReminders();
+
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ 已成功設定提醒！'),
+                    backgroundColor: Color(0xFF4CAF50),
+                  ),
+                );
+                Navigator.of(context).pop();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('請先選擇藥物')),
+                );
               }
-              if (!mounted) return;
-              _triggerOfficialFlow(this.context, currentMedicine);
             },
             child: const Text(
               '儲存',
@@ -412,6 +447,7 @@ class _ReminderPageState extends State<ReminderPage> {
     return '${_selectedTime.hour.toString().padLeft(2, '0')}:${_selectedTime.minute.toString().padLeft(2, '0')}';
   }
 
+  // 目前未使用，保留供 camera_page.dart 拍照辨識後的提示流程參考。
   void _triggerOfficialFlow(BuildContext context, String targetMedicine) {
     _ttsService.speak("是否需要設置用藥提醒？您可以設定時間提醒自己按時服藥。");
 
