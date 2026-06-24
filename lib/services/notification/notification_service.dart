@@ -39,6 +39,14 @@ class NotificationService {
         },
       );
 
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidPlugin != null) {
+        await androidPlugin.requestExactAlarmsPermission();
+      }
+
       _isInitialized = true;
       await requestPermissions();
       debugPrint("本地通知服務基礎初始化成功 (v18.0.0 + 台北時區已就緒)");
