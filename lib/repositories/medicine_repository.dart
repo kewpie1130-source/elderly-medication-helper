@@ -15,6 +15,8 @@ class MedicineRepository {
         'medicines',
         orderBy: 'createdAt DESC',
       );
+      print('===查詢結果===');
+      print('資料庫查詢到的藥物數量: ${maps.length}');
 
       return List.generate(maps.length, (i) {
         List<String> timings = [];
@@ -50,25 +52,14 @@ class MedicineRepository {
     try {
       final db = await _dbHelper.database;
 
-      final Map<String, dynamic> row = {
-        'id': medicine.id,
-        'name': medicine.name,
-        'type': medicine.type,
-        'dosage': medicine.dosage,
-        'frequency': medicine.frequency,
-        'timing': jsonEncode(medicine.timing),
-        'notice': medicine.notice,
-        'startDate': medicine.startDate,
-        'endDate': medicine.endDate,
-        'imagePath': medicine.imagePath,
-        'createdAt': medicine.createdAt,
-      };
-
-      await db.insert(
+      print('===準備寫入藥物===');
+      print('藥物名稱: ${medicine.name}, ID: ${medicine.id}');
+      final result = await db.insert(
         'medicines',
-        row,
+        medicine.toMap(),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      print('===寫入完成，回傳row id: $result===');
       return true;
     } catch (e) {
       print("Error inserting medicine: $e");

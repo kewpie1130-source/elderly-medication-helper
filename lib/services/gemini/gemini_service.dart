@@ -20,7 +20,7 @@ class GeminiService {
       'https://generativelanguage.googleapis.com/v1beta/models/'
       'gemini-2.5-flash:generateContent?key=$_apiKey';
 
-  Future<MedicineModel> parseOcrResult(String ocrText) async {
+  Future<List<MedicineModel>> parseOcrResult(String ocrText) async {
     if (ocrText.trim().isEmpty) {
       throw Exception('OCR 結果為空，無法解析');
     }
@@ -43,6 +43,18 @@ JSON 欄位：
 
 重要：絕對不要包含姓名、醫院名稱、診所名稱等個人資訊。
 只回傳 JSON，不要其他任何文字。
+
+請辨識圖片中的藥袋/藥盒/保健食品外包裝，
+一張圖片中可能包含多種藥品，
+請針對每一種藥品分別建立一筆資料，
+並回傳一個JSON陣列（即使只有一種藥品，也要包成陣列），
+格式為：
+[
+  { "name": "...", "type": "...", "dosage": "...",
+    "frequency": "...", "timing": [...], "notice": "...",
+    "indication": "...", "startDate": "...", "endDate": "..." }
+]
+不要用markdown格式，只回傳純JSON陣列，不要有其他文字說明。
 
 OCR 文字：
 $ocrText
@@ -73,21 +85,25 @@ $ocrText
         .replaceAll('```json', '')
         .replaceAll('```', '')
         .trim();
-    final map = jsonDecode(cleanJson) as Map<String, dynamic>;
+    final decoded = jsonDecode(cleanJson);
+    final List<dynamic> list = decoded is List ? decoded : [decoded];
 
-    return MedicineModel(
-      id: const Uuid().v4(),
-      name: map['name'] ?? '',
-      type: map['type'] ?? '',
-      dosage: map['dosage'] ?? '',
-      frequency: map['frequency'] ?? '',
-      timing: List<String>.from(map['timing'] ?? []),
-      notice: map['notice'] ?? '',
-      indication: map['indication'] ?? '',
-      startDate: map['startDate'] ?? '',
-      endDate: map['endDate'] ?? '',
-      imagePath: '',
-      createdAt: DateTime.now().toIso8601String(),
-    );
+    return list.map((item) {
+      final m = item as Map<String, dynamic>;
+      return MedicineModel(
+        id: const Uuid().v4(),
+        name: m['name'] ?? '',
+        type: m['type'] ?? '',
+        dosage: m['dosage'] ?? '',
+        frequency: m['frequency'] ?? '',
+        timing: List<String>.from(m['timing'] ?? []),
+        notice: m['notice'] ?? '',
+        indication: m['indication'] ?? '',
+        startDate: m['startDate'] ?? '',
+        endDate: m['endDate'] ?? '',
+        imagePath: '',
+        createdAt: DateTime.now().toIso8601String(),
+      );
+    }).toList();
   }
 }

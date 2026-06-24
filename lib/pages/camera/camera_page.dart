@@ -1,11 +1,19 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:uuid/uuid.dart';
 
+import '../../models/dose_log_model.dart';
 import '../../models/medicine_model.dart';
+import '../../repositories/medicine_repository.dart';
 import '../../services/gemini/gemini_service.dart';
+import '../../services/notification/notification_service.dart';
 import '../../services/ocr/ocr_service.dart';
+import '../../services/tts/tts_service.dart';
 import '../../theme/app_theme.dart';
+import '../reminder/widgets/contact_modal.dart';
+import '../reminder/widgets/reminder_modal.dart';
 
 // [邱靖喻] 首頁相機拍攝頁，禁止其他組員修改
 class CameraPage extends StatefulWidget {
@@ -19,6 +27,9 @@ class _CameraPageState extends State<CameraPage> {
   final ImagePicker _imagePicker = ImagePicker();
   final OcrService _ocrService = OcrService();
   final GeminiService _geminiService = GeminiService();
+  final TtsService _ttsService = TtsService();
+  final NotificationService _notificationService = NotificationService();
+  final MedicineRepository _medicineRepository = MedicineRepository();
 
   CameraController? _cameraController;
   bool _isCameraReady = false;
@@ -28,6 +39,8 @@ class _CameraPageState extends State<CameraPage> {
   @override
   void initState() {
     super.initState();
+    _ttsService.initTts();
+    _notificationService.initialize();
     _initializeCamera();
   }
 
@@ -111,7 +124,7 @@ class _CameraPageState extends State<CameraPage> {
       dialogShown = true;
 
       final ocrText = await _ocrService.recognizeText(imageFile);
-      final medicine = await _geminiService.parseOcrResult(ocrText);
+      final medicines = await _geminiService.parseOcrResult(ocrText);
 
       if (!mounted) return;
       if (dialogShown) {
@@ -119,12 +132,34 @@ class _CameraPageState extends State<CameraPage> {
         dialogShown = false;
       }
 
+      if (medicines.isEmpty) {
+        _showError('未能辨識出藥品資訊，請重新拍攝');
+        return;
+      }
+
+      // 全部存入資料庫
+      for (final med in medicines) {
+        await _medicineRepository.insertMedicine(med);
+      }
+
+      // TTS播報第一筆藥名
+      await _ttsService.speak(
+        '已為您辨識出${medicines.length}種藥品，第一種是${medicines.first.name}',
+      );
+
+      if (!mounted) return;
+
+      // 導向結果頁（傳入整個List）
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => MedicinePlaceholderPage(medicine: medicine),
+          builder: (_) => MedicinePlaceholderPage(medicines: medicines),
         ),
       );
+
+      // 辨識完成後詢問是否設置提醒（畫面7）
+      if (!mounted) return;
+      await _showReminderPrompt(medicines.first.name);
     } catch (error) {
       if (!mounted) return;
       if (dialogShown) {
@@ -152,6 +187,49 @@ class _CameraPageState extends State<CameraPage> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  Future<void> _showReminderPrompt(String medicineName) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ReminderModal(
+        onChoice: (wantsReminder) async {
+          Navigator.of(dialogContext).pop();
+          if (wantsReminder) {
+            final scheduledTime = tz.TZDateTime.now(tz.local)
+                .add(const Duration(seconds: 10));
+            await _notificationService.zonedSchedule(
+              medicineName.hashCode.abs(),
+              '用藥提醒',
+              '請記得服用：$medicineName',
+              scheduledTime,
+            );
+            await Future.delayed(const Duration(milliseconds: 500));
+            if (!mounted) return;
+            await _showContactPrompt();
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _showContactPrompt() async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => ContactModal(
+        onSave: (lineId) {
+          debugPrint('長者成功綁定聯絡人 LINE ID: $lineId');
+          Navigator.of(dialogContext).pop();
+        },
+        onCancel: () {
+          Navigator.of(dialogContext).pop();
+        },
+      ),
     );
   }
 
@@ -463,9 +541,9 @@ class _ScanFramePainter extends CustomPainter {
 
 // TODO [組員A]：此暫時頁面將由 MedicineDetailPage 取代
 class MedicinePlaceholderPage extends StatefulWidget {
-  final MedicineModel medicine;
+  final List<MedicineModel> medicines;
 
-  const MedicinePlaceholderPage({super.key, required this.medicine});
+  const MedicinePlaceholderPage({super.key, required this.medicines});
 
   @override
   State<MedicinePlaceholderPage> createState() =>
@@ -474,22 +552,55 @@ class MedicinePlaceholderPage extends StatefulWidget {
 
 class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
   bool _isTtsEnabled = false;
+  int _currentIndex = 0;
+  final TtsService _ttsService = TtsService();
+  final MedicineRepository _repository = MedicineRepository();
 
-  MedicineModel get medicine => widget.medicine;
+  List<MedicineModel> get medicines => widget.medicines;
+  MedicineModel get medicine => medicines[_currentIndex];
 
-  void _recordDose() {
-    // TODO [組員A]：串接 DoseLog 儲存
+  @override
+  void initState() {
+    super.initState();
+    _ttsService.initTts();
+  }
+
+  Future<void> _recordDose() async {
+    final doseLog = DoseLogModel(
+      id: const Uuid().v4(),
+      medicineId: medicine.id,
+      scheduledTime: DateTime.now().toIso8601String(),
+      takenTime: DateTime.now().toIso8601String(),
+      status: 'taken',
+      createdAt: DateTime.now().toIso8601String(),
+    );
+    await _repository.insertDoseLog(doseLog);
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('✅ 已記錄服藥！'),
-        backgroundColor: Color(0xFF4CAF50),
+      SnackBar(
+        content: Text('✅ 已記錄服用：${medicine.name}'),
+        backgroundColor: const Color(0xFF4CAF50),
       ),
     );
   }
 
-  void _toggleTts() {
-    // TODO [組員B]：串接 TtsService
+  Future<void> _toggleTts() async {
     setState(() => _isTtsEnabled = !_isTtsEnabled);
+    if (_isTtsEnabled) {
+      await _ttsService.speak(
+        '${medicine.name}，${medicine.dosage}，${medicine.frequency}',
+      );
+    } else {
+      await _ttsService.stop();
+    }
+  }
+
+  void _switchMedicine(int index) {
+    setState(() {
+      _currentIndex = index;
+      _isTtsEnabled = false;
+    });
   }
 
   @override
@@ -526,6 +637,47 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (medicines.length > 1)
+              Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '第${_currentIndex + 1}種藥品（共${medicines.length}種）',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: List.generate(medicines.length, (i) {
+                        return GestureDetector(
+                          onTap: () => _switchMedicine(i),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 3),
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: i == _currentIndex
+                                  ? AppTheme.primary
+                                  : Colors.grey.shade300,
+                            ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+
             // 藥品圖示卡片
             Container(
               width: double.infinity,
@@ -650,80 +802,110 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
       bottomNavigationBar: Container(
         color: Colors.white,
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              flex: 3,
-              child: SizedBox(
-                height: 60,
-                child: ElevatedButton(
-                  onPressed: _recordDose,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle, size: 24),
-                      SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          '打卡（已服藥）',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+            if (medicines.length > 1)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _currentIndex > 0
+                            ? () => _switchMedicine(_currentIndex - 1)
+                            : null,
+                        child: const Text('上一種藥品'),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _currentIndex < medicines.length - 1
+                            ? () => _switchMedicine(_currentIndex + 1)
+                            : null,
+                        child: const Text('下一種藥品'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 2,
-              child: SizedBox(
-                height: 60,
-                child: OutlinedButton(
-                  onPressed: _toggleTts,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.primary,
-                    side: const BorderSide(
-                      color: AppTheme.primary,
-                      width: 2,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          _isTtsEnabled ? '播報開啟' : '播報關閉',
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+            Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: SizedBox(
+                    height: 60,
+                    child: ElevatedButton(
+                      onPressed: _recordDose,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
                         ),
                       ),
-                    ],
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle, size: 24),
+                          SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              '打卡（已服藥）',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: SizedBox(
+                    height: 60,
+                    child: OutlinedButton(
+                      onPressed: _toggleTts,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primary,
+                        side: const BorderSide(
+                          color: AppTheme.primary,
+                          width: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              _isTtsEnabled ? '播報開啟' : '播報關閉',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
