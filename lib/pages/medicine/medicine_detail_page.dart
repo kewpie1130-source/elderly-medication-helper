@@ -162,15 +162,18 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                         children: [
                           Icon(Icons.check, size: 28, color: Colors.white),
                           SizedBox(width: 8),
-                          Text(
-                            '打卡\n(已服藥)',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.1,
+                          Flexible(
+                            child: Text(
+                              '打卡\n(已服藥)',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                height: 1.1,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center, // 🛠️ 已修正
                           ),
                         ],
                       ),
@@ -205,15 +208,18 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                             color: Colors.white,
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            _isTtsEnabled ? '播報\n(語音開啟)' : '播報\n(語音關閉)',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              height: 1.1,
+                          Flexible(
+                            child: Text(
+                              _isTtsEnabled ? '播報\n(語音開啟)' : '播報\n(語音關閉)',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                height: 1.1,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center, // 🛠️ 已修正
                           ),
                         ],
                       ),
