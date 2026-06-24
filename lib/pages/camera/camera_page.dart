@@ -656,22 +656,31 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
               flex: 3,
               child: SizedBox(
                 height: 60,
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: _recordDose,
-                  icon: const Icon(Icons.check_circle, size: 24),
-                  label: const Text(
-                    '打卡（已服藥）',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, size: 24),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          '打卡（已服藥）',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -681,19 +690,8 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
               flex: 2,
               child: SizedBox(
                 height: 60,
-                child: OutlinedButton.icon(
+                child: OutlinedButton(
                   onPressed: _toggleTts,
-                  icon: Icon(
-                    _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
-                    size: 22,
-                  ),
-                  label: Text(
-                    _isTtsEnabled ? '播報開啟' : '播報關閉',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.primary,
                     side: const BorderSide(
@@ -703,6 +701,26 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isTtsEnabled ? Icons.volume_up : Icons.volume_off,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          _isTtsEnabled ? '播報開啟' : '播報關閉',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
