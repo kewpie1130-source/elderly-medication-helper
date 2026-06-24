@@ -93,6 +93,7 @@ class _GalleryPageState extends State<GalleryPage> {
           ],
         ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'gallery_fab',
           backgroundColor: AppTheme.primary,
           onPressed: () => _pickImage(ImageSource.camera),
           child: const Icon(Icons.camera_alt, color: Colors.white),

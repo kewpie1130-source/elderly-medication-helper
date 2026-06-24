@@ -148,6 +148,7 @@ class _HistoryPageState extends State<HistoryPage> {
                   ],
                 ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'history_fab',
         onPressed: () async {
           await Navigator.push(
             context,
