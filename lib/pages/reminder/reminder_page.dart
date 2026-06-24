@@ -41,12 +41,6 @@ class _ReminderPageState extends State<ReminderPage> {
     _notificationService.initialize();
     _loadMedicines();
     _loadReminders();
-
-    if (widget.medicineName != null && widget.medicineName!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _triggerOfficialFlow(context, widget.medicineName!);
-      });
-    }
   }
 
   @override
@@ -370,7 +364,18 @@ class _ReminderPageState extends State<ReminderPage> {
     if (mounted) {
       setState(() {
         _medicineList = meds;
-        if (meds.isNotEmpty) _selectedMedicine = meds.first;
+        if (meds.isEmpty) return;
+
+        final targetName = widget.medicineName?.trim();
+        if (targetName != null && targetName.isNotEmpty) {
+          final matchedMedicines = meds.where(
+            (medicine) => medicine.name.trim() == targetName,
+          );
+          _selectedMedicine =
+              matchedMedicines.isNotEmpty ? matchedMedicines.first : meds.first;
+        } else {
+          _selectedMedicine = meds.first;
+        }
       });
     }
   }

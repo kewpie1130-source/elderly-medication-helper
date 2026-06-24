@@ -1,17 +1,14 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:timezone/timezone.dart' as tz;
-import 'package:uuid/uuid.dart';
 
-import '../../models/dose_log_model.dart';
 import '../../models/medicine_model.dart';
 import '../../repositories/medicine_repository.dart';
 import '../../services/gemini/gemini_service.dart';
-import '../../services/notification/notification_service.dart';
 import '../../services/ocr/ocr_service.dart';
 import '../../services/tts/tts_service.dart';
 import '../../theme/app_theme.dart';
+import '../reminder/reminder_page.dart';
 import '../reminder/widgets/contact_modal.dart';
 import '../reminder/widgets/reminder_modal.dart';
 
@@ -28,8 +25,6 @@ class _CameraPageState extends State<CameraPage> {
   final OcrService _ocrService = OcrService();
   final GeminiService _geminiService = GeminiService();
   final TtsService _ttsService = TtsService();
-  final NotificationService _notificationService = NotificationService();
-  final MedicineRepository _medicineRepository = MedicineRepository();
 
   CameraController? _cameraController;
   bool _isCameraReady = false;
@@ -40,7 +35,6 @@ class _CameraPageState extends State<CameraPage> {
   void initState() {
     super.initState();
     _ttsService.initTts();
-    _notificationService.initialize();
     _initializeCamera();
   }
 
@@ -124,7 +118,11 @@ class _CameraPageState extends State<CameraPage> {
       dialogShown = true;
 
       final ocrText = await _ocrService.recognizeText(imageFile);
-      final medicines = await _geminiService.parseOcrResult(ocrText);
+      final rawMedicines = await _geminiService.parseOcrResult(ocrText);
+
+      // 過濾掉name為空的無效辨識結果
+      final medicines =
+          rawMedicines.where((m) => m.name.trim().isNotEmpty).toList();
 
       if (!mounted) return;
       if (dialogShown) {
@@ -133,32 +131,26 @@ class _CameraPageState extends State<CameraPage> {
       }
 
       if (medicines.isEmpty) {
-        _showError('未能辨識出藥品資訊，請重新拍攝');
+        _showError('未能辨識出有效的藥品資訊，請重新拍攝清晰的藥袋或藥盒照片');
         return;
       }
 
-      // 全部存入資料庫
-      for (final med in medicines) {
-        await _medicineRepository.insertMedicine(med);
-      }
-
-      // TTS播報第一筆藥名
       await _ttsService.speak(
-        '已為您辨識出${medicines.length}種藥品，第一種是${medicines.first.name}',
+        '已為您辨識出${medicines.length}種藥品，請確認資訊是否正確',
       );
 
       if (!mounted) return;
 
-      // 導向結果頁（傳入整個List）
-      await Navigator.push(
+      final confirmed = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (_) => MedicinePlaceholderPage(medicines: medicines),
         ),
       );
 
-      // 辨識完成後詢問是否設置提醒（畫面7）
-      if (!mounted) return;
+      // 使用者在確認頁按下「確認加入」才會回傳true，才繼續往下走
+      if (confirmed != true || !mounted) return;
+
       await _showReminderPrompt(medicines.first.name);
     } catch (error) {
       if (!mounted) return;
@@ -199,15 +191,13 @@ class _CameraPageState extends State<CameraPage> {
         onChoice: (wantsReminder) async {
           Navigator.of(dialogContext).pop();
           if (wantsReminder) {
-            final scheduledTime = tz.TZDateTime.now(tz.local)
-                .add(const Duration(seconds: 10));
-            await _notificationService.zonedSchedule(
-              medicineName.hashCode.abs(),
-              '用藥提醒',
-              '請記得服用：$medicineName',
-              scheduledTime,
+            if (!mounted) return;
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ReminderPage(medicineName: medicineName),
+              ),
             );
-            await Future.delayed(const Duration(milliseconds: 500));
             if (!mounted) return;
             await _showContactPrompt();
           }
@@ -565,24 +555,20 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
     _ttsService.initTts();
   }
 
-  Future<void> _recordDose() async {
-    final doseLog = DoseLogModel(
-      id: const Uuid().v4(),
-      medicineId: medicine.id,
-      scheduledTime: DateTime.now().toIso8601String(),
-      takenTime: DateTime.now().toIso8601String(),
-      status: 'taken',
-      createdAt: DateTime.now().toIso8601String(),
-    );
-    await _repository.insertDoseLog(doseLog);
-
+  Future<void> _confirmAndSave() async {
+    for (final med in medicines) {
+      await _repository.insertMedicine(med);
+    }
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('✅ 已記錄服用：${medicine.name}'),
+        content: Text('✅ 已將${medicines.length}種藥品加入用藥紀錄！'),
         backgroundColor: const Color(0xFF4CAF50),
       ),
     );
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
+    Navigator.of(context).pop(true);
   }
 
   Future<void> _toggleTts() async {
@@ -837,7 +823,7 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
                   child: SizedBox(
                     height: 60,
                     child: ElevatedButton(
-                      onPressed: _recordDose,
+                      onPressed: _confirmAndSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
@@ -852,7 +838,7 @@ class _MedicinePlaceholderPageState extends State<MedicinePlaceholderPage> {
                           SizedBox(width: 6),
                           Flexible(
                             child: Text(
-                              '打卡（已服藥）',
+                              '確認加入紀錄',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
