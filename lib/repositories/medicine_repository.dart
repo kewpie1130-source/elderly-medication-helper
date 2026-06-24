@@ -39,6 +39,7 @@ class MedicineRepository {
           endDate: maps[i]['endDate'] ?? '',
           imagePath: maps[i]['imagePath'] ?? '',
           createdAt: maps[i]['createdAt'] ?? '',
+          batchId: maps[i]['batchId'] as String? ?? '',
         );
       });
     } catch (e) {
@@ -53,7 +54,7 @@ class MedicineRepository {
       final db = await _dbHelper.database;
 
       print('===準備寫入藥物===');
-      print('藥物名稱: ${medicine.name}, ID: ${medicine.id}');
+      print('藥物名稱: ${medicine.name}, ID: ${medicine.id}, batchId: "${medicine.batchId}"');
       final result = await db.insert(
         'medicines',
         medicine.toMap(),
