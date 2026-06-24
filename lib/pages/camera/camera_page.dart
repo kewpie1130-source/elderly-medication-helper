@@ -137,9 +137,12 @@ class _CameraPageState extends State<CameraPage> {
       }
 
       final batchId = const Uuid().v4();
+      print('===產生的batchId=== $batchId');
       final medicinesWithBatch = medicines
           .map((m) => m.copyWith(batchId: batchId))
           .toList();
+      print('===套用後第一筆藥的batchId=== ${medicinesWithBatch.first.batchId}');
+      print('===套用後第一筆藥toMap()的batchId=== ${medicinesWithBatch.first.toMap()['batchId']}');
 
       await _ttsService.speak(
         '已為您辨識出${medicinesWithBatch.length}種藥品，請確認資訊是否正確',

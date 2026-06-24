@@ -61,14 +61,17 @@ class _HistoryPageState extends State<HistoryPage> {
     final Map<String, List<MedicineModel>> batchMap = {};
 
     for (final med in medicines) {
-      // 沒有batchId的（手動新增的單筆），各自獨立成一個批次，用自己的id當batchId
       final key = med.batchId.isNotEmpty ? med.batchId : 'single_${med.id}';
+      print(
+        '===批次分組偵錯=== 藥名: ${med.name}, batchId: "${med.batchId}", 使用的key: $key',
+      );
       batchMap.putIfAbsent(key, () => []).add(med);
     }
 
+    print('===共有幾個批次=== ${batchMap.length}個批次');
+
     final batches = batchMap.entries.map((entry) {
       final meds = entry.value;
-      // 用該批次第一筆的createdAt代表整批的時間
       return MedicineBatch(
         batchId: entry.key,
         medicines: meds,
@@ -76,7 +79,6 @@ class _HistoryPageState extends State<HistoryPage> {
       );
     }).toList();
 
-    // 依時間新到舊排序
     batches.sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return batches;
   }
