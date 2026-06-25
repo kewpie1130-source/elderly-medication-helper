@@ -93,4 +93,14 @@ class MedicineRepository {
       return false;
     }
   }
+
+  Future<int> deleteMedicine(String id) async {
+    try {
+      final db = await _dbHelper.database;
+      return await db.delete('medicines', where: 'id = ?', whereArgs: [id]);
+    } catch (e) {
+      print("Error deleting medicine: $e");
+      return -1;
+    }
+  }
 }

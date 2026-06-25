@@ -192,82 +192,126 @@ class HistoryPageState extends State<HistoryPage> {
     final firstName = batch.medicines.first.name;
     final displayTitle = count > 1 ? '$firstName 等 $count 種藥品' : firstName;
 
-    return Card(
-      elevation: 3,
-      margin: const EdgeInsets.symmetric(vertical: 8.0),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      color: Colors.white,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: () async {
-          if (count == 1) {
-            // 只有一種藥，直接進詳情頁
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    MedicineDetailPage(medicine: batch.medicines.first),
+    return Dismissible(
+      key: Key(batch.batchId),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 24),
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Icon(Icons.delete, color: Colors.white, size: 28),
+      ),
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('刪除紀錄'),
+            content: Text(
+              count > 1 ? '確定要刪除這$count種藥品的紀錄嗎？' : '確定要刪除這筆紀錄嗎？',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('取消'),
               ),
-            );
-          } else {
-            // 多種藥，進批次清單頁（先用簡單ListView顯示，點擊個別藥品才進詳情）
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    _BatchDetailPage(medicines: batch.medicines),
-              ),
-            );
-          }
-          loadHistoryData();
-        },
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  count > 1 ? Icons.medical_services : Icons.calendar_today,
-                  size: 21,
-                  color: AppTheme.primary,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayTitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '拍攝時間：$scanTime',
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                size: 26,
-                color: AppTheme.primary,
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('刪除', style: TextStyle(color: Colors.red)),
               ),
             ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        for (final med in batch.medicines) {
+          await _repository.deleteMedicine(med.id);
+        }
+        await loadHistoryData();
+      },
+      child: Card(
+        elevation: 3,
+        margin: const EdgeInsets.symmetric(vertical: 8.0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        color: Colors.white,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () async {
+            if (count == 1) {
+              // 只有一種藥，直接進詳情頁
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      MedicineDetailPage(medicine: batch.medicines.first),
+                ),
+              );
+            } else {
+              // 多種藥，進批次清單頁（先用簡單ListView顯示，點擊個別藥品才進詳情）
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      _BatchDetailPage(medicines: batch.medicines),
+                ),
+              );
+            }
+            loadHistoryData();
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    count > 1 ? Icons.medical_services : Icons.calendar_today,
+                    size: 21,
+                    color: AppTheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '拍攝時間：$scanTime',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 26,
+                  color: AppTheme.primary,
+                ),
+              ],
+            ),
           ),
         ),
       ),
