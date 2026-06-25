@@ -69,22 +69,39 @@ OCR 文字：
 $ocrText
 ''';
 
-    final response = await http.post(
-      Uri.parse(_endpoint),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'contents': [
-          {
-            'parts': [
-              {'text': prompt},
-            ],
-          },
-        ],
-      }),
-    );
+    http.Response? response;
+    int attempts = 0;
+    const maxAttempts = 3;
 
-    if (response.statusCode != 200) {
-      throw Exception('Gemini API 錯誤：${response.statusCode}');
+    while (attempts < maxAttempts) {
+      attempts++;
+      response = await http.post(
+        Uri.parse(_endpoint),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [
+                {'text': prompt},
+              ],
+            },
+          ],
+        }),
+      );
+
+      if (response.statusCode == 200) break;
+
+      if ((response.statusCode == 503 || response.statusCode == 429) &&
+          attempts < maxAttempts) {
+        await Future.delayed(const Duration(milliseconds: 1500));
+        continue;
+      }
+
+      break;
+    }
+
+    if (response == null || response.statusCode != 200) {
+      throw Exception('Gemini API 錯誤：${response?.statusCode}（已重試$attempts次）');
     }
 
     final data = jsonDecode(response.body);
