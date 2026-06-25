@@ -76,8 +76,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-    controller.dispose();
-
     if (!mounted) return;
     if (name != null && name.isNotEmpty) {
       setState(() => _userName = name);
@@ -107,8 +105,6 @@ class _SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-    controller.dispose();
-
     if (!mounted) return;
     if (lineId != null) {
       setState(() => _lineId = lineId);
