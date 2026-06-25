@@ -1,6 +1,8 @@
-﻿import 'dart:io';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import '../../services/analytics/analytics_service.dart';
 import '../../theme/app_theme.dart';
 
@@ -16,13 +18,44 @@ class _GalleryPageState extends State<GalleryPage> {
   final AnalyticsService _analytics = AnalyticsService();
   List<File> _capturedImages = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedImages();
+  }
+
+  Future<String> _getGalleryDir() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final galleryDir = Directory(p.join(dir.path, 'gallery_images'));
+    if (!await galleryDir.exists()) {
+      await galleryDir.create(recursive: true);
+    }
+    return galleryDir.path;
+  }
+
+  Future<void> _loadSavedImages() async {
+    final dirPath = await _getGalleryDir();
+    final dir = Directory(dirPath);
+    final files = dir.listSync().whereType<File>().toList()
+      ..sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+    if (mounted) {
+      setState(() => _capturedImages = files);
+    }
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     final XFile? pickedFile = await _picker.pickImage(source: source);
     if (pickedFile != null) {
+      final dirPath = await _getGalleryDir();
+      final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final savedFile = await File(
+        pickedFile.path,
+      ).copy(p.join(dirPath, fileName));
+
       setState(() {
-        _capturedImages.add(File(pickedFile.path));
+        _capturedImages.insert(0, savedFile);
       });
-      
+
       // 整合 Analytics：拍照後記錄匿名數據
       await _analytics.logAnalytics(
         ageGroup: "65-74", // 預設值，可後續調整
@@ -31,7 +64,7 @@ class _GalleryPageState extends State<GalleryPage> {
         taken: true,
         hour: DateTime.now().hour.toString().padLeft(2, '0'),
       );
-      
+
       print('已成功紀錄匿名數據至 Firestore');
     }
   }
@@ -76,7 +109,7 @@ class _GalleryPageState extends State<GalleryPage> {
               Container(
                 height: 38,
                 alignment: Alignment.center,
-                child: const Text("手機相簿載入"),
+                child: const Text("選取照片"),
               ),
               Container(
                 height: 38,
