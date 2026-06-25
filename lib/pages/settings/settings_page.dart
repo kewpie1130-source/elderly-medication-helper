@@ -66,7 +66,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, null),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -78,6 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     controller.dispose();
 
+    if (!mounted) return;
     if (name != null && name.isNotEmpty) {
       setState(() => _userName = name);
     }
@@ -96,7 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, null),
             child: const Text('取消'),
           ),
           FilledButton(
@@ -108,6 +109,7 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     controller.dispose();
 
+    if (!mounted) return;
     if (lineId != null) {
       setState(() => _lineId = lineId);
     }
