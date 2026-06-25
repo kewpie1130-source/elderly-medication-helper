@@ -351,7 +351,7 @@ git diff origin/develop origin/feature/member-X --name-only
 ## 🔑 九、重要設定值記錄（避免遺失）
 
 ```
-Gemini API Key: AIzaSyB5NM1_W1eal9Ug4eVxiBLvVn4nbj05XGg
+Gemini API Key: 請洽PM私下取得，不可寫入此公開文件
 （注意：今天測試過多已觸發429限流，需確認額度恢復狀況）
 
 專案路徑：C:\projects\elderly_medication_app（正確，不要用C:\Users\靖喻\elderly_medication_app舊路徑）
@@ -359,7 +359,7 @@ Flutter SDK路徑：C:\flutter
 Android Package Name：com.example.elderly_medication_app
 
 常用測試指令：
-flutter run -d [裝置IP:PORT] --dart-define=GEMINI_API_KEY=AIzaSyB5NM1_W1eal9Ug4eVxiBLvVn4nbj05XGg
+flutter run -d [裝置IP:PORT] --dart-define=GEMINI_API_KEY=你的API_Key
 
 清除App資料指令（測試新schema時用）：
 & "C:\Users\靖喻\AppData\Local\Android\Sdk\platform-tools\adb.exe" shell pm clear com.example.elderly_medication_app
