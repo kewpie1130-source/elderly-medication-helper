@@ -19,14 +19,16 @@ class MainNavigationPage extends StatefulWidget {
 
 class _MainNavigationPageState extends State<MainNavigationPage> {
   int _selectedIndex = 0;
+  final GlobalKey<HistoryPageState> _historyPageKey =
+      GlobalKey<HistoryPageState>();
 
-  static const List<Widget> _pages = [
-    CameraPage(),
-    HistoryPage(),
-    ReminderPage(),
-    GalleryPage(),
-    SettingsPage(),
-  ];
+  List<Widget> get _pages => [
+        const CameraPage(),
+        HistoryPage(key: _historyPageKey),
+        const ReminderPage(),
+        const GalleryPage(),
+        const SettingsPage(),
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() => _selectedIndex = index);
+          if (index == 1) {
+            _historyPageKey.currentState?.loadHistoryData();
+          }
         },
         selectedItemColor: AppTheme.primary,
         unselectedItemColor: Colors.grey,

@@ -23,10 +23,10 @@ class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
 
   @override
-  State<HistoryPage> createState() => _HistoryPageState();
+  State<HistoryPage> createState() => HistoryPageState();
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class HistoryPageState extends State<HistoryPage> {
   final MedicineRepository _repository = MedicineRepository();
   List<MedicineModel> _allMedicines = [];
   bool _isLoading = true;
@@ -34,10 +34,10 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    _loadHistoryData();
+    loadHistoryData();
   }
 
-  Future<void> _loadHistoryData() async {
+  Future<void> loadHistoryData() async {
     setState(() => _isLoading = true);
     try {
       final data = await _repository.getAllMedicines();
@@ -156,7 +156,7 @@ class _HistoryPageState extends State<HistoryPage> {
             context,
             MaterialPageRoute(builder: (context) => const AddMedicinePage()),
           );
-          _loadHistoryData();
+          loadHistoryData();
         },
         backgroundColor: AppTheme.primary,
         child: const Icon(Icons.add, size: 28, color: Colors.white),
@@ -219,7 +219,7 @@ class _HistoryPageState extends State<HistoryPage> {
               ),
             );
           }
-          _loadHistoryData();
+          loadHistoryData();
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
