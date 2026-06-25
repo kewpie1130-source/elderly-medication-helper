@@ -104,7 +104,12 @@ class _MedicineDetailPageState extends State<MedicineDetailPage> {
                   ),
                   const SizedBox(height: 12),
 
-                  // 依據規格要求呈現的詳細資訊條（🛠️ 已移除規格書未定義的 indication 欄位）
+                  // 依據規格要求呈現的詳細資訊條
+                  _buildInfoTile(
+                    Icons.health_and_safety_outlined,
+                    '適應症（治療什麼）',
+                    med.indication.isEmpty ? '未填寫適應症' : med.indication,
+                  ),
                   _buildInfoTile(Icons.mode_edit_outline, '用法與用量', med.dosage),
                   _buildInfoTile(Icons.repeat, '服用頻率', med.frequency),
                   _buildInfoTile(
