@@ -108,6 +108,8 @@ class _ReminderPageState extends State<ReminderPage> {
                     backgroundColor: Color(0xFF4CAF50),
                   ),
                 );
+                await Future.delayed(const Duration(milliseconds: 600));
+                if (!mounted) return;
                 Navigator.of(context).pop();
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
