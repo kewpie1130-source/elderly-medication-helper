@@ -92,12 +92,6 @@ class _GalleryPageState extends State<GalleryPage> {
             _buildRecordView(),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          heroTag: 'gallery_fab',
-          backgroundColor: AppTheme.primary,
-          onPressed: () => _pickImage(ImageSource.camera),
-          child: const Icon(Icons.camera_alt, color: Colors.white),
-        ),
       ),
     );
   }
@@ -131,16 +125,6 @@ class _GalleryPageState extends State<GalleryPage> {
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textDark,
                 height: 1.35,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              "支援 JPG、PNG 圖片格式",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
               ),
             ),
             const SizedBox(height: 42),
